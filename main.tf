@@ -1,3 +1,7 @@
+locals {
+  empty_map = {}
+}
+
 data "azurerm_client_config" "core" {}
 
 // created under "Tenant Root Group" when no parent_id provided
@@ -12,8 +16,9 @@ module "myorg_root_management_group" {
 }
 
 module "myorg_root_management_group_policy" {
-  source               = "../terraform-azure-alz-core-platform-policy"
-  management_group_ids = module.myorg_root_management_group.parent_ids
+  source              = "../terraform-azure-alz-core-platform-policy"
+  management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
+  policies            = local.empty_map
 
   providers = {
     azurerm = azurerm
@@ -31,9 +36,20 @@ module "organisational_management_groups" {
   }
 }
 
-module "organisational_management_groups_policy" {
-  source               = "../terraform-azure-alz-core-platform-policy"
-  management_group_ids = module.organisational_management_groups.parent_ids
+module "organisational_management_group_platform_policy" {
+  source              = "../terraform-azure-alz-core-platform-policy"
+  management_group_id = module.organisational_management_groups.parent_ids["Platform"]
+  policies            = local.empty_map
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+module "organisational_management_group_landingzones_policy" {
+  source              = "../terraform-azure-alz-core-platform-policy"
+  management_group_id = module.organisational_management_groups.parent_ids["Landing zones"]
+  policies            = local.empty_map
 
   providers = {
     azurerm = azurerm
@@ -51,9 +67,30 @@ module "platform_management_groups" {
   }
 }
 
-module "platform_management_groups_policy" {
-  source               = "../terraform-azure-alz-core-platform-policy"
-  management_group_ids = module.platform_management_groups.parent_ids
+module "platform_management_groups_identity_policy" {
+  source              = "../terraform-azure-alz-core-platform-policy"
+  management_group_id = module.platform_management_groups.parent_ids["Identity"]
+  policies            = local.empty_map
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+module "platform_management_groups_mangement_policy" {
+  source              = "../terraform-azure-alz-core-platform-policy"
+  management_group_id = module.platform_management_groups.parent_ids["Management"]
+  policies            = local.empty_map
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+module "platform_management_groups_connectivity_policy" {
+  source              = "../terraform-azure-alz-core-platform-policy"
+  management_group_id = module.platform_management_groups.parent_ids["Connectivity"]
+  policies            = local.empty_map
 
   providers = {
     azurerm = azurerm
@@ -71,9 +108,20 @@ module "application_management_groups" {
   }
 }
 
-module "application_management_groups_policy" {
-  source               = "../terraform-azure-alz-core-platform-policy"
-  management_group_ids = module.application_management_groups.parent_ids
+module "application_management_groups_corp_policy" {
+  source              = "../terraform-azure-alz-core-platform-policy"
+  management_group_id = module.application_management_groups.parent_ids["Corp"]
+  policies            = local.empty_map
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+module "application_management_groups_online_policy" {
+  source              = "../terraform-azure-alz-core-platform-policy"
+  management_group_id = module.application_management_groups.parent_ids["Online"]
+  policies            = local.empty_map
 
   providers = {
     azurerm = azurerm
