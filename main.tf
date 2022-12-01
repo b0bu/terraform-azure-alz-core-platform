@@ -34,6 +34,7 @@ module "organisational_management_groups" {
 module "organisational_management_groups_policy" {
   source               = "../terraform-azure-alz-core-platform-policy"
   management_group_ids = module.organisational_management_groups.parent_ids
+  
   providers = {
     azurerm = azurerm
   }
@@ -53,6 +54,7 @@ module "platform_management_groups" {
 module "platform_management_groups_policy" {
   source               = "../terraform-azure-alz-core-platform-policy"
   management_group_ids = module.platform_management_groups.parent_ids
+
   providers = {
     azurerm = azurerm
   }
@@ -72,6 +74,7 @@ module "application_management_groups" {
 module "application_management_groups_policy" {
   source               = "../terraform-azure-alz-core-platform-policy"
   management_group_ids = module.application_management_groups.parent_ids
+
   providers = {
     azurerm = azurerm
   }
