@@ -77,7 +77,7 @@ module "platform_management_groups_identity_policy" {
   }
 }
 
-module "platform_management_groups_mangement_policy" {
+module "platform_management_groups_management_policy" {
   source              = "../terraform-azure-alz-core-platform-policy"
   management_group_id = module.platform_management_groups.parent_ids["Management"]
   policies            = local.empty_map
