@@ -1,7 +1,7 @@
 data "azurerm_client_config" "core" {}
 
 // created under "Tenant Root Group" when no parent_id provided
-// level 1
+// org root level 1
 module "myorg_root_management_group" {
   source            = "../terraform-azure-alz-management-group"
   management_groups = ["MyOrg"]
@@ -20,7 +20,7 @@ module "myorg_root_management_group_policy" {
   }
 }
 
-// level 2
+// roots for level 2
 module "organisational_management_groups" {
   source            = "../terraform-azure-alz-management-group"
   management_groups = ["Platform", "Landing zones", "Decommissioned", "Sandbox"]
@@ -34,13 +34,13 @@ module "organisational_management_groups" {
 module "organisational_management_groups_policy" {
   source               = "../terraform-azure-alz-core-platform-policy"
   management_group_ids = module.organisational_management_groups.parent_ids
-  
+
   providers = {
     azurerm = azurerm
   }
 }
 
-// level 3
+// roots for level 3
 module "platform_management_groups" {
   source            = "../terraform-azure-alz-management-group"
   management_groups = ["Identity", "Management", "Connectivity"]
@@ -60,7 +60,7 @@ module "platform_management_groups_policy" {
   }
 }
 
-// level 3
+// secondary roots for level 3
 module "application_management_groups" {
   source            = "../terraform-azure-alz-management-group"
   management_groups = ["Corp", "Online"]
