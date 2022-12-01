@@ -1,53 +1,78 @@
-terraform {
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = ">= 3.0.2"
-    }
-  }
-}
-
-provider "azurerm" {
-  features {}
-}
-
 data "azurerm_client_config" "core" {}
 
 // created under "Tenant Root Group" when no parent_id provided
-module "level_1" {
+// level 1
+module "myorg_root_management_group" {
   source            = "../terraform-azure-alz-management-group"
   management_groups = ["MyOrg"]
+
+  providers = {
+    azurerm = azurerm
+  }
 }
 
-module "level_2" {
-  source = "../terraform-azure-alz-management-group"
-  management_groups = [
-    "Platform",
-    "Landing zones",
-    "Decommissioned",
-    "Sandbox"
-  ]
-  parent_id = module.level_1.parent_id["MyOrg"]
-  depends_on = [module.level_1]
+module "myorg_root_management_group_policy" {
+  source               = "../terraform-azure-alz-core-platform-policy"
+  management_group_ids = module.myorg_root_management_group.parent_ids
+
+  providers = {
+    azurerm = azurerm
+  }
 }
 
-module "level_3_platform" {
-  source = "../terraform-azure-alz-management-group"
-  management_groups = [
-    "Identity",
-    "Management",
-    "Connectivity",
-  ]
-  parent_id = module.level_2.parent_id["Platform"]
-  depends_on = [module.level_2]
+// level 2
+module "organisational_management_groups" {
+  source            = "../terraform-azure-alz-management-group"
+  management_groups = ["Platform", "Landing zones", "Decommissioned", "Sandbox"]
+  parent_id         = module.myorg_root_management_group.parent_ids["MyOrg"]
+
+  providers = {
+    azurerm = azurerm
+  }
 }
 
-module "level_3_landingzone" {
-  source = "../terraform-azure-alz-management-group"
-  management_groups = [
-    "Corp",
-    "Online",
-  ]
-  parent_id = module.level_2.parent_id["Landing zones"]
-  depends_on = [module.level_2]
+module "organisational_management_groups_policy" {
+  source               = "../terraform-azure-alz-core-platform-policy"
+  management_group_ids = module.organisational_management_groups.parent_ids
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+// level 3
+module "platform_management_groups" {
+  source            = "../terraform-azure-alz-management-group"
+  management_groups = ["Identity", "Management", "Connectivity"]
+  parent_id         = module.organisational_management_groups.parent_ids["Platform"]
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+module "platform_management_groups_policy" {
+  source               = "../terraform-azure-alz-core-platform-policy"
+  management_group_ids = module.platform_management_groups.parent_ids
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+// level 3
+module "application_management_groups" {
+  source            = "../terraform-azure-alz-management-group"
+  management_groups = ["Corp", "Online"]
+  parent_id         = module.organisational_management_groups.parent_ids["Landing zones"]
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+module "application_management_groups_policy" {
+  source               = "../terraform-azure-alz-core-platform-policy"
+  management_group_ids = module.application_management_groups.parent_ids
+  providers = {
+    azurerm = azurerm
+  }
 }
