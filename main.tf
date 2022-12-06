@@ -1,34 +1,49 @@
 locals {
-  empty_map = {}
+  empty_map    = {}
+  management_groups = {
+    root         = ["MyOrg"]
+    organisation = ["Platform", "Landing zones", "Decommissioned", "Sandbox"]
+    platform     = ["Identity", "Management", "Connectivity"]
+    landingzone  = ["Corp", "Online"]
+  }
 }
 
 data "azurerm_client_config" "core" {}
 
-// created under "Tenant Root Group" when no parent_id provided
-// org root level 1
+// org root level 1 created under "Tenant Root Group" when no parent_id provided
 module "myorg_root_management_group" {
   source            = "../terraform-azure-alz-management-group"
-  management_groups = ["MyOrg"]
+  management_groups = local.management_groups["root"]
 
   providers = {
     azurerm = azurerm
   }
 }
 
-module "myorg_root_management_group_policy" {
-  source              = "../terraform-azure-alz-core-platform-policy"
+// data model returns root level management group policies
+module "myorg_root_management_group_policy_factory" {
+  source = "../terraform-azure-alz-core-platform-management-group-policy-factory"
+  //version = 0.0.1
+  archetype = "root"
+}
+
+module "myorg_root_management_group_policy_assigment" {
+  source              = "../terraform-azure-alz-core-platform-management-group-policy"
   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
-  policies            = local.empty_map
+  baseline_policy     = module.myorg_root_management_group_policy_factory.baseline_policy
+  custom_policy       = module.myorg_root_management_group_policy_factory.custom_policy
 
   providers = {
     azurerm = azurerm
   }
 }
 
-// roots for level 2
+// -------------------
+
+// roots for level 2 of hierarchy, also defined decomissioned and sandboxes but are not in use right now
 module "organisational_management_groups" {
   source            = "../terraform-azure-alz-management-group"
-  management_groups = ["Platform", "Landing zones", "Decommissioned", "Sandbox"]
+  management_groups = local.management_groups["organisation"]
   parent_id         = module.myorg_root_management_group.parent_ids["MyOrg"]
 
   providers = {
@@ -36,30 +51,48 @@ module "organisational_management_groups" {
   }
 }
 
-module "organisational_management_group_platform_policy" {
-  source              = "../terraform-azure-alz-core-platform-policy"
+// data model returns platform level policies
+module "platform_management_groups_policy_factory" {
+  source = "../terraform-azure-alz-core-platform-management-group-policy-factory"
+  //version = 0.0.1
+  archetype = "platform"
+}
+
+module "organisational_management_group_platform_policy_assignment" {
+  source              = "../terraform-azure-alz-core-platform-management-group-policy"
   management_group_id = module.organisational_management_groups.parent_ids["Platform"]
-  policies            = local.empty_map
+  baseline_policy     = module.platform_management_groups_policy_factory.baseline_policy
+  custom_policy       = module.platform_management_groups_policy_factory.custom_policy
 
   providers = {
     azurerm = azurerm
   }
 }
 
-module "organisational_management_group_landingzones_policy" {
-  source              = "../terraform-azure-alz-core-platform-policy"
+// data model returns landingzone level policies
+module "landingzones_management_groups_policy_factory" {
+  source = "../terraform-azure-alz-core-platform-management-group-policy-factory"
+  //version = 0.0.1
+  archetype = "landingzones"
+}
+
+module "organisational_management_group_landingzones_policy_assignment" {
+  source              = "../terraform-azure-alz-core-platform-management-group-policy"
   management_group_id = module.organisational_management_groups.parent_ids["Landing zones"]
-  policies            = local.empty_map
+  baseline_policy     = module.landingzones_management_groups_policy_factory.baseline_policy
+  custom_policy       = module.landingzones_management_groups_policy_factory.custom_policy
 
   providers = {
     azurerm = azurerm
   }
 }
+
+// -------------------
 
 // roots for level 3
 module "platform_management_groups" {
   source            = "../terraform-azure-alz-management-group"
-  management_groups = ["Identity", "Management", "Connectivity"]
+  management_groups = local.management_groups["platform"]
   parent_id         = module.organisational_management_groups.parent_ids["Platform"]
 
   providers = {
@@ -67,40 +100,68 @@ module "platform_management_groups" {
   }
 }
 
-module "platform_management_groups_identity_policy" {
-  source              = "../terraform-azure-alz-core-platform-policy"
+// data model returns identity level policies
+module "identity_management_groups_policy_factory" {
+  source = "../terraform-azure-alz-core-platform-management-group-policy-factory"
+  //version = 0.0.1
+  archetype = "identity"
+}
+
+
+module "platform_management_groups_identity_policy_assignment" {
+  source              = "../terraform-azure-alz-core-platform-management-group-policy"
   management_group_id = module.platform_management_groups.parent_ids["Identity"]
-  policies            = local.empty_map
+  baseline_policy     = module.identity_management_groups_policy_factory.baseline_policy
+  custom_policy       = module.identity_management_groups_policy_factory.custom_policy
 
   providers = {
     azurerm = azurerm
   }
 }
 
-module "platform_management_groups_management_policy" {
-  source              = "../terraform-azure-alz-core-platform-policy"
+// data model returns management level policies
+module "management_management_groups_policy_factory" {
+  source = "../terraform-azure-alz-core-platform-management-group-policy-factory"
+  //version = 0.0.1
+  archetype = "management"
+}
+
+module "platform_management_groups_management_policy_assignment" {
+  source              = "../terraform-azure-alz-core-platform-management-group-policy"
   management_group_id = module.platform_management_groups.parent_ids["Management"]
-  policies            = local.empty_map
+  baseline_policy     = module.management_management_groups_policy_factory.baseline_policy
+  custom_policy       = module.management_management_groups_policy_factory.custom_policy
 
   providers = {
     azurerm = azurerm
   }
 }
 
-module "platform_management_groups_connectivity_policy" {
-  source              = "../terraform-azure-alz-core-platform-policy"
+module "connectivity_management_groups_policy_factory" {
+  source = "../terraform-azure-alz-core-platform-management-group-policy-factory"
+  //version = 0.0.1
+  archetype = "connectivity"
+}
+
+
+module "platform_management_groups_connectivity_policy_assignment" {
+  source              = "../terraform-azure-alz-core-platform-management-group-policy"
   management_group_id = module.platform_management_groups.parent_ids["Connectivity"]
-  policies            = local.empty_map
+  baseline_policy     = module.connectivity_management_groups_policy_factory.baseline_policy
+  custom_policy       = module.connectivity_management_groups_policy_factory.custom_policy
 
   providers = {
     azurerm = azurerm
   }
 }
 
-// secondary roots for level 3
+
+// -------------------
+
+// secondary level 3 roots
 module "application_management_groups" {
   source            = "../terraform-azure-alz-management-group"
-  management_groups = ["Corp", "Online"]
+  management_groups = local.management_groups["landingzone"]
   parent_id         = module.organisational_management_groups.parent_ids["Landing zones"]
 
   providers = {
@@ -108,20 +169,36 @@ module "application_management_groups" {
   }
 }
 
-module "application_management_groups_corp_policy" {
-  source              = "../terraform-azure-alz-core-platform-policy"
+// data model returns corp level policies
+module "corp_management_groups_policy_factory" {
+  source = "../terraform-azure-alz-core-platform-management-group-policy-factory"
+  //version = 0.0.1
+  archetype = "corp"
+}
+
+module "application_management_groups_corp_policy_assignment" {
+  source              = "../terraform-azure-alz-core-platform-management-group-policy"
   management_group_id = module.application_management_groups.parent_ids["Corp"]
-  policies            = local.empty_map
+  baseline_policy     = module.corp_management_groups_policy_factory.baseline_policy
+  custom_policy       = module.corp_management_groups_policy_factory.custom_policy
 
   providers = {
     azurerm = azurerm
   }
 }
 
-module "application_management_groups_online_policy" {
-  source              = "../terraform-azure-alz-core-platform-policy"
+// data model returns online level policies
+module "online_management_groups_policy_factory" {
+  source = "../terraform-azure-alz-core-platform-management-group-policy-factory"
+  //version = 0.0.1
+  archetype = "online"
+}
+
+module "application_management_groups_online_policy_assignment" {
+  source              = "../terraform-azure-alz-core-platform-management-group-policy"
   management_group_id = module.application_management_groups.parent_ids["Online"]
-  policies            = local.empty_map
+  baseline_policy     = module.online_management_groups_policy_factory.baseline_policy
+  custom_policy       = module.online_management_groups_policy_factory.custom_policy
 
   providers = {
     azurerm = azurerm
