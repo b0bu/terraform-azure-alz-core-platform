@@ -28,7 +28,7 @@ module "myorg_root_management_group_policy_factory" {
 }
 
 module "myorg_root_management_group_policy_assigment" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy"
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
   baseline_policy     = module.myorg_root_management_group_policy_factory.baseline_policy
   custom_policy       = module.myorg_root_management_group_policy_factory.custom_policy
@@ -59,7 +59,7 @@ module "platform_management_groups_policy_factory" {
 }
 
 module "organisational_management_group_platform_policy_assignment" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy"
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
   management_group_id = module.organisational_management_groups.parent_ids["Platform"]
   baseline_policy     = module.platform_management_groups_policy_factory.baseline_policy
   custom_policy       = module.platform_management_groups_policy_factory.custom_policy
@@ -77,7 +77,7 @@ module "landingzones_management_groups_policy_factory" {
 }
 
 module "organisational_management_group_landingzones_policy_assignment" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy"
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
   management_group_id = module.organisational_management_groups.parent_ids["Landing zones"]
   baseline_policy     = module.landingzones_management_groups_policy_factory.baseline_policy
   custom_policy       = module.landingzones_management_groups_policy_factory.custom_policy
@@ -109,7 +109,7 @@ module "identity_management_groups_policy_factory" {
 
 
 module "platform_management_groups_identity_policy_assignment" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy"
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
   management_group_id = module.platform_management_groups.parent_ids["Identity"]
   baseline_policy     = module.identity_management_groups_policy_factory.baseline_policy
   custom_policy       = module.identity_management_groups_policy_factory.custom_policy
@@ -127,7 +127,7 @@ module "management_management_groups_policy_factory" {
 }
 
 module "platform_management_groups_management_policy_assignment" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy"
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
   management_group_id = module.platform_management_groups.parent_ids["Management"]
   baseline_policy     = module.management_management_groups_policy_factory.baseline_policy
   custom_policy       = module.management_management_groups_policy_factory.custom_policy
@@ -145,7 +145,7 @@ module "connectivity_management_groups_policy_factory" {
 
 
 module "platform_management_groups_connectivity_policy_assignment" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy"
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
   management_group_id = module.platform_management_groups.parent_ids["Connectivity"]
   baseline_policy     = module.connectivity_management_groups_policy_factory.baseline_policy
   custom_policy       = module.connectivity_management_groups_policy_factory.custom_policy
@@ -177,7 +177,7 @@ module "corp_management_groups_policy_factory" {
 }
 
 module "application_management_groups_corp_policy_assignment" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy"
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
   management_group_id = module.application_management_groups.parent_ids["Corp"]
   baseline_policy     = module.corp_management_groups_policy_factory.baseline_policy
   custom_policy       = module.corp_management_groups_policy_factory.custom_policy
@@ -195,7 +195,7 @@ module "online_management_groups_policy_factory" {
 }
 
 module "application_management_groups_online_policy_assignment" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy"
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
   management_group_id = module.application_management_groups.parent_ids["Online"]
   baseline_policy     = module.online_management_groups_policy_factory.baseline_policy
   custom_policy       = module.online_management_groups_policy_factory.custom_policy
