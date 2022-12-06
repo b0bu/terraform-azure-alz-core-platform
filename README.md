@@ -1,6 +1,13 @@
 # terraform-azure-alz-core-platform
 NIST SP 800-53 and CIS 1.4 compliant management group hierarchy
 
+run
+```
+terraform init -backend-config=backend.conf
+```
+
+
+
 data model is meant to absract the complexity and allow variable versioning
 
 where no updates were applied to the policies governing root node
