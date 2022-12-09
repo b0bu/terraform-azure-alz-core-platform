@@ -1,5 +1,5 @@
 locals {
-  empty_map    = {}
+  empty_map = {}
   management_groups = {
     root         = ["MyOrg"]
     organisation = ["Platform", "Landing zones", "Decommissioned", "Sandbox"]
@@ -20,23 +20,67 @@ module "myorg_root_management_group" {
   }
 }
 
-// data model returns root level management group policies
+// data model generation of custom and built in policy for archetype platform wide policy maintains independent versioning
 module "myorg_root_management_group_policy_factory" {
-  source = "../terraform-azure-alz-core-platform-management-group-policy-factory"
-  //version = 0.0.1
+  source    = "../terraform-azure-alz-core-platform-management-group-policy-factory"
+  scope     = module.myorg_root_management_group.parent_ids["MyOrg"]
   archetype = "root"
 }
 
-module "myorg_root_management_group_policy_assigment" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
+// deploy custom policy initiatives and definition templates
+module "myorg_root_management_group_policy" {
+  source              = "../terraform-azure-alz-core-platform-management-group-policy"
   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
-  baseline_policy     = module.myorg_root_management_group_policy_factory.baseline_policy
-  custom_policy       = module.myorg_root_management_group_policy_factory.custom_policy
+  policy_initiatives  = module.myorg_root_management_group_policy_factory.initiatives
+  policy_definitions  = module.myorg_root_management_group_policy_factory.definitions
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+
+// can technically use this to assign everything, just not give it roles, maybe still use this for everything using the builtin like data structure 
+// assign built in policy
+module "myorg_root_management_group_builtin_policy_assigment" { 
+  source              = "../terraform-azure-alz-core-platform-management-group-builtin-policy-assignment"
+  management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
+  builtin_policy      = module.myorg_root_management_group_policy_factory.builtin_policy
 
   providers = {
     azurerm = azurerm
   }
 }
+
+// required by caf tbd
+
+// data model generation of custom and built in policy for archetype platform wide policy maintains independent versioning
+# module "management_management_group_policy_factory" {
+#   source    = "../terraform-azure-alz-core-platform-management-group-policy-factory"
+#   scope     = module.myorg_root_management_group.parent_ids["Management"]
+#   archetype = "management"
+# }
+
+// assign custom policy USE SOME OUTPUT FROM CREATE POLICY??
+# module "myorg_root_management_group_custom_policy_assigment" {
+#   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
+#   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
+#   policy_initiatives  = module.myorg_root_management_group_policy_factory.initiatives
+#   policy_definitions  = module.myorg_root_management_group_policy_factory.definition
+#   providers = {
+#     azurerm = azurerm
+#   }
+# }
+
+// ? 
+# module "myorg_root_management_group_policy_role_assigment" {
+#   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
+#   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
+#   policy_initiatives  = module.myorg_root_management_group_policy_factory.initiatives
+#   policy_definitions  = module.myorg_root_management_group_policy_factory.definition
+#   providers = {
+#     azurerm = azurerm
+#   }
+# }
 
 // -------------------
 
@@ -45,42 +89,6 @@ module "organisational_management_groups" {
   source            = "../terraform-azure-alz-management-group"
   management_groups = local.management_groups["organisation"]
   parent_id         = module.myorg_root_management_group.parent_ids["MyOrg"]
-
-  providers = {
-    azurerm = azurerm
-  }
-}
-
-// data model returns platform level policies
-module "platform_management_groups_policy_factory" {
-  source = "../terraform-azure-alz-core-platform-management-group-policy-factory"
-  //version = 0.0.1
-  archetype = "platform"
-}
-
-module "organisational_management_group_platform_policy_assignment" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
-  management_group_id = module.organisational_management_groups.parent_ids["Platform"]
-  baseline_policy     = module.platform_management_groups_policy_factory.baseline_policy
-  custom_policy       = module.platform_management_groups_policy_factory.custom_policy
-
-  providers = {
-    azurerm = azurerm
-  }
-}
-
-// data model returns landingzone level policies
-module "landingzones_management_groups_policy_factory" {
-  source = "../terraform-azure-alz-core-platform-management-group-policy-factory"
-  //version = 0.0.1
-  archetype = "landingzones"
-}
-
-module "organisational_management_group_landingzones_policy_assignment" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
-  management_group_id = module.organisational_management_groups.parent_ids["Landing zones"]
-  baseline_policy     = module.landingzones_management_groups_policy_factory.baseline_policy
-  custom_policy       = module.landingzones_management_groups_policy_factory.custom_policy
 
   providers = {
     azurerm = azurerm
@@ -100,60 +108,24 @@ module "platform_management_groups" {
   }
 }
 
-// data model returns identity level policies
-module "identity_management_groups_policy_factory" {
-  source = "../terraform-azure-alz-core-platform-management-group-policy-factory"
-  //version = 0.0.1
-  archetype = "identity"
-}
-
-
-module "platform_management_groups_identity_policy_assignment" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
-  management_group_id = module.platform_management_groups.parent_ids["Identity"]
-  baseline_policy     = module.identity_management_groups_policy_factory.baseline_policy
-  custom_policy       = module.identity_management_groups_policy_factory.custom_policy
-
-  providers = {
-    azurerm = azurerm
-  }
-}
 
 // data model returns management level policies
-module "management_management_groups_policy_factory" {
-  source = "../terraform-azure-alz-core-platform-management-group-policy-factory"
-  //version = 0.0.1
-  archetype = "management"
-}
+# module "management_management_groups_policy_factory" {
+#   source = "../terraform-azure-alz-core-platform-management-group-policy-factory"
+#   //version = 0.0.1
+#   archetype = "management"
+# }
 
-module "platform_management_groups_management_policy_assignment" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
-  management_group_id = module.platform_management_groups.parent_ids["Management"]
-  baseline_policy     = module.management_management_groups_policy_factory.baseline_policy
-  custom_policy       = module.management_management_groups_policy_factory.custom_policy
+# module "platform_management_groups_management_policy_assignment" {
+#   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
+#   management_group_id = module.platform_management_groups.parent_ids["Management"]
+#   baseline_policy     = module.management_management_groups_policy_factory.baseline_policy
+#   custom_policy       = module.management_management_groups_policy_factory.custom_policy
 
-  providers = {
-    azurerm = azurerm
-  }
-}
-
-module "connectivity_management_groups_policy_factory" {
-  source = "../terraform-azure-alz-core-platform-management-group-policy-factory"
-  //version = 0.0.1
-  archetype = "connectivity"
-}
-
-
-module "platform_management_groups_connectivity_policy_assignment" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
-  management_group_id = module.platform_management_groups.parent_ids["Connectivity"]
-  baseline_policy     = module.connectivity_management_groups_policy_factory.baseline_policy
-  custom_policy       = module.connectivity_management_groups_policy_factory.custom_policy
-
-  providers = {
-    azurerm = azurerm
-  }
-}
+#   providers = {
+#     azurerm = azurerm
+#   }
+# }
 
 
 // -------------------
@@ -169,38 +141,23 @@ module "application_management_groups" {
   }
 }
 
-// data model returns corp level policies
-module "corp_management_groups_policy_factory" {
-  source = "../terraform-azure-alz-core-platform-management-group-policy-factory"
-  //version = 0.0.1
-  archetype = "corp"
-}
+// ---- law for testing MDFC policy assignment 
 
-module "application_management_groups_corp_policy_assignment" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
-  management_group_id = module.application_management_groups.parent_ids["Corp"]
-  baseline_policy     = module.corp_management_groups_policy_factory.baseline_policy
-  custom_policy       = module.corp_management_groups_policy_factory.custom_policy
-
+module "log_analytics_resource_group" {
+  source   = "../terraform-azure-alz-resource-group"
+  name     = "testing-law-MDFC-assignment"
+  location = "uksouth"
   providers = {
-    azurerm = azurerm
+    azurerm = azurerm.sandbox
   }
 }
 
-// data model returns online level policies
-module "online_management_groups_policy_factory" {
-  source = "../terraform-azure-alz-core-platform-management-group-policy-factory"
-  //version = 0.0.1
-  archetype = "online"
-}
-
-module "application_management_groups_online_policy_assignment" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
-  management_group_id = module.application_management_groups.parent_ids["Online"]
-  baseline_policy     = module.online_management_groups_policy_factory.baseline_policy
-  custom_policy       = module.online_management_groups_policy_factory.custom_policy
+module "log_analytics_workspace" {
+  source   = "../terraform-azure-alz-loganalytics-workspace"
+  name     = module.log_analytics_resource_group.name
+  location = module.log_analytics_resource_group.location
 
   providers = {
-    azurerm = azurerm
+    azurerm = azurerm.sandbox
   }
 }
