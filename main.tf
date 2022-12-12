@@ -11,6 +11,7 @@ locals {
 data "azurerm_client_config" "core" {}
 
 // org root level 1 created under "Tenant Root Group" when no parent_id provided
+// can remove myorg from all of the module names
 module "myorg_root_management_group" {
   source            = "../terraform-azure-alz-management-group"
   management_groups = local.management_groups["root"]
@@ -27,29 +28,73 @@ module "myorg_root_management_group_policy_factory" {
   archetype = "root"
 }
 
-// deploy custom policy initiatives and definition templates
-module "myorg_root_management_group_policy" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy"
+// create custom policy definitions returning their ids
+module "myorg_root_management_group_policy_definitions" {
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-definitions"
   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
-  policy_initiatives  = module.myorg_root_management_group_policy_factory.initiatives
   policy_definitions  = module.myorg_root_management_group_policy_factory.definitions
   providers = {
     azurerm = azurerm
   }
 }
 
-
-// can technically use this to assign everything, just not give it roles, maybe still use this for everything using the builtin like data structure 
-// assign built in policy
-module "myorg_root_management_group_builtin_policy_assigment" { 
-  source              = "../terraform-azure-alz-core-platform-management-group-builtin-policy-assignment"
+// create custom policy initiatives and definitions returning their ids
+// should there be a module for initiatives and a module for definitions??
+module "myorg_root_management_group_policy_initiatives" {
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-initiatives"
   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
-  builtin_policy      = module.myorg_root_management_group_policy_factory.builtin_policy
+  policy_initiatives  = module.myorg_root_management_group_policy_factory.initiatives
+  providers = {
+    azurerm = azurerm
+  }
+  depends_on = [
+    module.myorg_root_management_group_policy_definitions
+  ]
+}
+
+// assign builtin policy
+module "myorg_root_management_group_builtin_policy_assigment" {
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
+  management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
+  policy_ids          = module.myorg_root_management_group_policy_factory.builtin_policy
 
   providers = {
     azurerm = azurerm
   }
 }
+
+// assign custom built policies -- add here that it's custom initiaives
+module "myorg_root_management_group_custom_policy_assigment" {
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
+  management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
+  policy_ids          = module.myorg_root_management_group_policy_initiatives.deployed_initiatives
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+module "myorg_root_management_group_custom_definition_policy_assigment" {
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
+  management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
+  policy_ids          = module.myorg_root_management_group_policy_definitions.deployed_definitions
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+// policy-factory should know which roles a particular policy needs, that's one of it's purposes
+# output "identities" {
+#   value = module.myorg_root_management_group_custom_policy_assigment.principal_ids
+# }
+
+// which roles belong to which policies and at which scope
+# module "myorg_root_management_group_policy_role_assignment" {
+#   source     = "../terraform-azure-alz-role-assignment-for-policy"
+#   principals = module.myorg_root_management_group_custom_policy_assigment.principal_ids
+#   //policy_roles        = module.myorg_root_management_group_policy.azurerm_role_assignments
+# }
 
 // required by caf tbd
 
