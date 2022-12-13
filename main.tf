@@ -94,37 +94,36 @@ locals {
 
 }
 
+# output "custom_definitions_requiring_managed_identity" {
+#   value = local.custom_definitions_requiring_managed_identity
+# }
 
-output "custom_definitions_requiring_managed_identity" {
-  value = local.custom_definitions_requiring_managed_identity
-}
+# output "custom_definitions_not_requiring_managed_identity" {
+#   value = local.custom_definitions_not_requiring_managed_identity
+# }
 
-output "custom_definitions_not_requiring_managed_identity" {
-  value = local.custom_definitions_not_requiring_managed_identity
-}
+# output "custom_initiatives_requiring_managed_identity" {
+#   value = local.custom_initiatives_requiring_managed_identity
+# }
 
-output "custom_initiatives_requiring_managed_identity" {
-  value = local.custom_initiatives_requiring_managed_identity
-}
+# output "custom_initiatives_not_requiring_managed_identity" {
+#   value = local.custom_initiatives_not_requiring_managed_identity
+# }
 
-output "custom_initiatives_not_requiring_managed_identity" {
-  value = local.custom_initiatives_not_requiring_managed_identity
-}
+# output "builtin_definitions_requiring_managed_identity" {
+#   value = local.builtin_definitions_requiring_managed_identity
+# }
+# output "builtin_definitions_not_requiring_managed_identity" {
+#   value = local.builtin_definitions_not_requiring_managed_identity
+# }
 
-output "builtin_definitions_requiring_managed_identity" {
-  value = local.builtin_definitions_requiring_managed_identity
-}
-output "builtin_definitions_not_requiring_managed_identity" {
-  value = local.builtin_definitions_not_requiring_managed_identity
-}
+# output "policies_requiring_managed_identity" {
+#   value = local.policies_requiring_managed_identity
+# }
 
-output "policies_requiring_managed_identity" {
-  value = local.policies_requiring_managed_identity
-}
-
-output "policies_not_requiring_managed_identity" {
-  value = local.policies_not_requiring_managed_identity
-}
+# output "policies_not_requiring_managed_identity" {
+#   value = local.policies_not_requiring_managed_identity
+# }
 
 module "root_management_group_policy_assigment_not_requiring_managed_identity" {
   for_each = { for policy in local.policies_not_requiring_managed_identity: policy.name => policy }
@@ -150,43 +149,7 @@ module "root_management_group_policy_assigment_requiring_managed_identity" {
   }
 }
 
-// assign initiatives with managed identity
-# module "myorg_root_management_group_custom_policy_assigment_with_managed_identity" {
-#   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment-with-id"
-#   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
-#   policy_ids          = module.myorg_root_management_group_policy_initiatives.deployed_initiatives
-
-#   providers = {
-#     azurerm = azurerm
-#   }
-# }
-
-// assign definitions completely working as is
-# module "myorg_root_management_group_custom_definition_policy_assigments" {
-#   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
-#   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
-#   policy_ids          = module.myorg_root_management_group_policy_definitions.deployed_definitions
-
-#   providers = {
-#     azurerm = azurerm
-#   }
-# }
-
-# // assign definitions with managed identity completely working as is
-# module "myorg_root_management_group_custom_definition_policy_assigments_with_managed_identity" {
-#   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment-with-id"
-#   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
-#   policy_ids          = module.myorg_root_management_group_policy_definitions.deployed_definitions
-
-#   providers = {
-#     azurerm = azurerm
-#   }
-# }
-
-// policy-factory should know which roles a particular policy needs, that's one of it's purposes
-# output "identities" {
-#   value = module.myorg_root_management_group_custom_policy_assigment.principal_ids
-# }
+// NOW I CARE ABOUT THE PRINCIPAL OUTPUT OF THE ASSIGNMENT FOR THE ROLE
 
 // which roles belong to which policies and at which scope
 # module "myorg_root_management_group_policy_role_assignment" {
@@ -195,7 +158,7 @@ module "root_management_group_policy_assigment_requiring_managed_identity" {
 #   //policy_roles        = module.myorg_root_management_group_policy.azurerm_role_assignments
 # }
 
-// required by caf tbd
+// required by caf tbd there is a policy assignemnt at this scope 
 
 // data model generation of custom and built in policy for archetype platform wide policy maintains independent versioning
 # module "management_management_group_policy_factory" {
@@ -204,29 +167,9 @@ module "root_management_group_policy_assigment_requiring_managed_identity" {
 #   archetype = "management"
 # }
 
-// assign custom policy USE SOME OUTPUT FROM CREATE POLICY??
-# module "myorg_root_management_group_custom_policy_assigment" {
-#   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
-#   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
-#   policy_initiatives  = module.myorg_root_management_group_policy_factory.initiatives
-#   policy_definitions  = module.myorg_root_management_group_policy_factory.definition
-#   providers = {
-#     azurerm = azurerm
-#   }
-# }
-
-// ? 
-# module "myorg_root_management_group_policy_role_assigment" {
-#   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
-#   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
-#   policy_initiatives  = module.myorg_root_management_group_policy_factory.initiatives
-#   policy_definitions  = module.myorg_root_management_group_policy_factory.definition
-#   providers = {
-#     azurerm = azurerm
-#   }
-# }
 
 // -------------------
+
 
 // roots for level 2 of hierarchy, also defined decomissioned and sandboxes but are not in use right now
 module "organisational_management_groups" {
