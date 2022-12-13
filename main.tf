@@ -53,10 +53,48 @@ module "myorg_root_management_group_policy_initiatives" {
 }
 
 locals {
-  // determine if managed Identity is required
+  // could templates be pulled off of disk and encoded for ease and less lines??
+  // template paramaters for policy by name, to apply at assignment time
+  template_parameters_for_policy_assignement = {
+    Deploy-MDFC-Config = {
+      params = {
+        ascExportResourceGroupLocation = {
+          value = "uksouth"
+        }
+        ascExportResourceGroupName     = {
+          value = "for_test"
+        }
+        emailSecurityContact           = {}
+        enableAscForAppServices        = {}
+        enableAscForArm                = {}
+        enableAscForContainers         = {}
+        enableAscForDns                = {}
+        enableAscForKeyVault           = {}
+        enableAscForOssDb              = {}
+        enableAscForServers            = {}
+        enableAscForSql                = {}
+        enableAscForSqlOnVm            = {}
+        enableAscForStorage            = {}
+        logAnalytics                   = {}
+      }
+    }
+    Deploy-ASC-SecContacts = {
+      params = {
+        emailSecurityContact = {
+          value = "contoso@microsoft.com"
+        }
+      }
+    }
+  }
+}
+
+locals {
+  // categorise policy assignment by if managed identity is required or not
+  // put policy in azurerm_role_assignments if a managed identity is required
   azurerm_role_assignments = {
-    "Deploy-MDFC-Config"   = ["Security Admin", "Contributor"]
-    "NIST-SP-800-53-rev-5" = [] # assign with managed identity but no role assignments included
+    Deploy-MDFC-Config     = ["Security Admin", "Contributor"]
+    NIST-SP-800-53-rev-5   = [] # assign with managed identity but no role assignments included
+    Deploy-ASC-SecContacts = [] # assign with managed identity but no role assignments included
   }
 
   custom_definitions_requiring_managed_identity = [
@@ -89,48 +127,17 @@ locals {
     policy if !contains(keys(local.azurerm_role_assignments), policy.name)
   ]
 
-  policies_requiring_managed_identity = concat(local.custom_definitions_requiring_managed_identity, local.custom_initiatives_requiring_managed_identity, local.builtin_definitions_requiring_managed_identity)
+  policies_requiring_managed_identity     = concat(local.custom_definitions_requiring_managed_identity, local.custom_initiatives_requiring_managed_identity, local.builtin_definitions_requiring_managed_identity)
   policies_not_requiring_managed_identity = concat(local.custom_definitions_not_requiring_managed_identity, local.custom_initiatives_not_requiring_managed_identity, local.builtin_definitions_not_requiring_managed_identity)
-
 }
 
-# output "custom_definitions_requiring_managed_identity" {
-#   value = local.custom_definitions_requiring_managed_identity
-# }
-
-# output "custom_definitions_not_requiring_managed_identity" {
-#   value = local.custom_definitions_not_requiring_managed_identity
-# }
-
-# output "custom_initiatives_requiring_managed_identity" {
-#   value = local.custom_initiatives_requiring_managed_identity
-# }
-
-# output "custom_initiatives_not_requiring_managed_identity" {
-#   value = local.custom_initiatives_not_requiring_managed_identity
-# }
-
-# output "builtin_definitions_requiring_managed_identity" {
-#   value = local.builtin_definitions_requiring_managed_identity
-# }
-# output "builtin_definitions_not_requiring_managed_identity" {
-#   value = local.builtin_definitions_not_requiring_managed_identity
-# }
-
-# output "policies_requiring_managed_identity" {
-#   value = local.policies_requiring_managed_identity
-# }
-
-# output "policies_not_requiring_managed_identity" {
-#   value = local.policies_not_requiring_managed_identity
-# }
-
 module "root_management_group_policy_assigment_not_requiring_managed_identity" {
-  for_each = { for policy in local.policies_not_requiring_managed_identity: policy.name => policy }
+  for_each            = { for policy in local.policies_not_requiring_managed_identity : policy.name => policy }
   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
   name                = each.value.name
   policy_id           = each.value.id
+  parameters          = jsonencode(try(local.template_parameters_for_policy_assignement[each.value.name].params, {}))
 
   providers = {
     azurerm = azurerm
@@ -138,11 +145,12 @@ module "root_management_group_policy_assigment_not_requiring_managed_identity" {
 }
 
 module "root_management_group_policy_assigment_requiring_managed_identity" {
-  for_each = { for policy in local.policies_requiring_managed_identity: policy.name => policy }
+  for_each            = { for policy in local.policies_requiring_managed_identity : policy.name => policy }
   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment-with-id"
   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
   name                = each.value.name
   policy_id           = each.value.id
+  parameters          = jsonencode(try(local.template_parameters_for_policy_assignement[each.value.name].params, {}))
 
   providers = {
     azurerm = azurerm
