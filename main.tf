@@ -52,45 +52,30 @@ module "myorg_root_management_group_policy_initiatives" {
   ]
 }
 
-locals {
-  // could templates be pulled off of disk and encoded for ease and less lines??
-  // template paramaters for policy by name, to apply at assignment time
-  template_parameters_for_policy_assignement = {
-    Deploy-MDFC-Config = {
-      params = {
-        ascExportResourceGroupLocation = {
-          value = "uksouth"
-        }
-        ascExportResourceGroupName     = {
-          value = "for_test"
-        }
-        emailSecurityContact           = {}
-        enableAscForAppServices        = {}
-        enableAscForArm                = {}
-        enableAscForContainers         = {}
-        enableAscForDns                = {}
-        enableAscForKeyVault           = {}
-        enableAscForOssDb              = {}
-        enableAscForServers            = {}
-        enableAscForSql                = {}
-        enableAscForSqlOnVm            = {}
-        enableAscForStorage            = {}
-        logAnalytics                   = {}
-      }
-    }
-    Deploy-ASC-SecContacts = {
-      params = {
-        emailSecurityContact = {
-          value = "contoso@microsoft.com"
-        }
-      }
-    }
+// ---- law for testing MDFC policy assignment 
+module "log_analytics_resource_group" {
+  source   = "../terraform-azure-alz-resource-group"
+  name     = "testing-law-MDFC-assignment"
+  location = "uksouth"
+  providers = {
+    azurerm = azurerm.sandbox
+  }
+}
+
+module "log_analytics_workspace" {
+  source   = "../terraform-azure-alz-loganalytics-workspace"
+  name     = module.log_analytics_resource_group.name
+  location = module.log_analytics_resource_group.location
+
+  providers = {
+    azurerm = azurerm.sandbox
   }
 }
 
 locals {
   // categorise policy assignment by if managed identity is required or not
   // put policy in azurerm_role_assignments if a managed identity is required
+  // parameters spat out as output from factory once working
   azurerm_role_assignments = {
     Deploy-MDFC-Config     = ["Security Admin", "Contributor"]
     NIST-SP-800-53-rev-5   = [] # assign with managed identity but no role assignments included
@@ -137,7 +122,7 @@ module "root_management_group_policy_assigment_not_requiring_managed_identity" {
   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
   name                = each.value.name
   policy_id           = each.value.id
-  parameters          = jsonencode(try(local.template_parameters_for_policy_assignement[each.value.name].params, {}))
+  parameters          = jsonencode(try(module.myorg_root_management_group_policy_factory.parameters[each.value.name].params, {}))
 
   providers = {
     azurerm = azurerm
@@ -150,7 +135,7 @@ module "root_management_group_policy_assigment_requiring_managed_identity" {
   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
   name                = each.value.name
   policy_id           = each.value.id
-  parameters          = jsonencode(try(local.template_parameters_for_policy_assignement[each.value.name].params, {}))
+  parameters          = jsonencode(try(module.myorg_root_management_group_policy_factory.parameters[each.value.name].params, {}))
 
   providers = {
     azurerm = azurerm
@@ -236,23 +221,3 @@ module "application_management_groups" {
   }
 }
 
-// ---- law for testing MDFC policy assignment 
-
-module "log_analytics_resource_group" {
-  source   = "../terraform-azure-alz-resource-group"
-  name     = "testing-law-MDFC-assignment"
-  location = "uksouth"
-  providers = {
-    azurerm = azurerm.sandbox
-  }
-}
-
-module "log_analytics_workspace" {
-  source   = "../terraform-azure-alz-loganalytics-workspace"
-  name     = module.log_analytics_resource_group.name
-  location = module.log_analytics_resource_group.location
-
-  providers = {
-    azurerm = azurerm.sandbox
-  }
-}
