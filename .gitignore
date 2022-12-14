@@ -4,7 +4,7 @@ backend.conf
 # .tfstate files
 *.tfstate
 *.tfstate.*
-
+.tool-versions
 # Crash log files
 crash.log
 
