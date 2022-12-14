@@ -29,10 +29,11 @@ module "myorg_root_management_group_policy_factory" {
 }
 
 // create custom policy definitions returning their ids
+// checking of values to be done in the module, sos to make consumption of the module easier
 module "myorg_root_management_group_policy_definitions" {
   for_each = module.myorg_root_management_group_policy_factory.definitions
 
-  source       = "../terraform-azure-alz-core-platform-management-group-policy-definitions-new"
+  source       = "../terraform-azure-alz-core-platform-management-group-policy-definitions"
   name         = each.value.name
   mode         = each.value.properties.mode
   display_name = each.value.properties.displayName
@@ -51,42 +52,20 @@ module "myorg_root_management_group_policy_definitions" {
 module "myorg_root_management_group_policy_initiatives" {
   for_each = module.myorg_root_management_group_policy_factory.initiatives
 
-  source       = "../terraform-azure-alz-core-platform-management-group-policy-initiatives-new"
-  name         = each.value.name
-  properties   = each.value.properties
+  source     = "../terraform-azure-alz-core-platform-management-group-policy-initiatives"
+  name       = each.value.name
+  properties = each.value.properties
+
   management_group_id = try(each.value.scope_id, module.myorg_root_management_group.parent_ids["MyOrg"])
+
+  depends_on = [
+    module.myorg_root_management_group_policy_definitions
+  ]
 
   providers = {
     azurerm = azurerm
   }
 }
-
-# module "myorg_root_management_group_policy_definitions" {
-#   // should take 1 policy definition and loop module?
-#   source              = "../terraform-azure-alz-core-platform-management-group-policy-definitions"
-#   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
-#   policy_definitions  = module.myorg_root_management_group_policy_factory.definitions
-#   providers = {
-#     azurerm = azurerm
-#   }
-# }
-
-# output "initiatives" {
-#   value = module.myorg_root_management_group_policy_factory.initiatives
-# }
-
-// create custom policy initiatives returning their ids
-# module "myorg_root_management_group_policy_initiatives" {
-#   source              = "../terraform-azure-alz-core-platform-management-group-policy-initiatives"
-#   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
-#   policy_initiatives  = module.myorg_root_management_group_policy_factory.initiatives
-#   providers = {
-#     azurerm = azurerm
-#   }
-#   depends_on = [
-#     module.myorg_root_management_group_policy_definitions
-#   ]
-# }
 
 // ---- law for testing MDFC policy assignment 
 module "log_analytics_resource_group" {
@@ -108,86 +87,22 @@ module "log_analytics_workspace" {
   }
 }
 
-# output "wut" {
-#   value = module.myorg_root_management_group_policy_definitions_new
-# }
-
-# output "deployed_definitions" {
-#   value = module.myorg_root_management_group_policy_definitions.deployed_definitions
-# }
-
-# output "custom_definitions_requiring_managed_identity_old" {
-#   value = local.custom_definitions_requiring_managed_identity_old
-# }
-
-# output "custom_definitions_requiring_managed_identity_new" {
-#   value = local.custom_definitions_requiring_managed_identity_new
-# }
-
 locals {
-  // categorise policy assignment by if managed identity is required or not
-  // put policy in azurerm_role_assignments if a managed identity is required
-  // parameters spat out as output from factory once working
-  azurerm_role_assignments = {
-    Deploy-MDFC-Config     = ["Security Admin", "Contributor"]
-    NIST-SP-800-53-rev-5   = [] # assign with managed identity but no role assignments included
-    Deploy-ASC-SecContacts = [] # assign with managed identity but no role assignments included
-  }
 
-  custom_definitions_requiring_managed_identity = [
-    for _, policy in module.myorg_root_management_group_policy_definitions :
-    policy.deployed_definition if contains(keys(local.azurerm_role_assignments), policy.deployed_definition.name)
-  ]
-
-  custom_definitions_not_requiring_managed_identity = [
-    for _, policy in module.myorg_root_management_group_policy_definitions :
-    policy.deployed_definition if !contains(keys(local.azurerm_role_assignments), policy.deployed_definition.name)
-  ]
-
-  custom_initiatives_requiring_managed_identity = [
+  policy_assignment_requiring_managed_identity = [
     for _, policy in module.myorg_root_management_group_policy_initiatives :
-    policy.deployed_initiative if contains(keys(local.azurerm_role_assignments), policy.deployed_initiative.name)
+    policy.deployed_initiative if contains(keys(module.myorg_root_management_group_policy_factory.azurerm_role_assignments), policy.deployed_initiative.name)
   ]
 
-  custom_initiatives_not_requiring_managed_identity = [
+  policy_assignment_not_requiring_managed_identity = [
     for _, policy in module.myorg_root_management_group_policy_initiatives :
-    policy.deployed_initiative if !contains(keys(local.azurerm_role_assignments), policy.deployed_initiative.name)
+    policy.deployed_initiative if !contains(keys(module.myorg_root_management_group_policy_factory.azurerm_role_assignments), policy.deployed_initiative.name)
   ]
-
-  # custom_initiatives_requiring_managed_identity = [
-  #   for policy in module.myorg_root_management_group_policy_initiatives.deployed_initiatives :
-  #   policy if contains(keys(local.azurerm_role_assignments), policy.name)
-  # ]
-
-  # custom_initiatives_not_requiring_managed_identity = [
-  #   for policy in module.myorg_root_management_group_policy_initiatives.deployed_initiatives :
-  #   policy if !contains(keys(local.azurerm_role_assignments), policy.name)
-  # ]
-
-  builtin_definitions_requiring_managed_identity = [
-    for policy in module.myorg_root_management_group_policy_factory.builtin_definitions :
-    policy if contains(keys(local.azurerm_role_assignments), policy.name)
-  ]
-
-  builtin_definitions_not_requiring_managed_identity = [
-    for policy in module.myorg_root_management_group_policy_factory.builtin_definitions :
-    policy if !contains(keys(local.azurerm_role_assignments), policy.name)
-  ]
-
-  # policies_requiring_managed_identity     = concat(local.custom_initiatives_requiring_managed_identity, local.builtin_definitions_requiring_managed_identity)
-  # policies_not_requiring_managed_identity = concat(local.custom_initiatives_not_requiring_managed_identity, local.builtin_definitions_not_requiring_managed_identity)
-
-  # policies_requiring_managed_identity     = concat(local.custom_definitions_requiring_managed_identity, local.builtin_definitions_requiring_managed_identity)
-  # policies_not_requiring_managed_identity = concat(local.custom_definitions_not_requiring_managed_identity, local.builtin_definitions_not_requiring_managed_identity)
-
-  policies_requiring_managed_identity     = concat(local.custom_definitions_requiring_managed_identity, local.custom_initiatives_requiring_managed_identity, local.builtin_definitions_requiring_managed_identity)
-  policies_not_requiring_managed_identity = concat(local.custom_definitions_not_requiring_managed_identity, local.custom_initiatives_not_requiring_managed_identity, local.builtin_definitions_not_requiring_managed_identity)
-
 }
 
 // dynamic custom policy assignment
 module "root_management_group_policy_assigment_not_requiring_managed_identity" {
-  for_each            = { for policy in local.policies_not_requiring_managed_identity : policy.name => policy }
+  for_each            = { for policy in local.policy_assignment_not_requiring_managed_identity : policy.name => policy }
   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment-no-managed-identity"
   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
   name                = each.value.name
@@ -200,7 +115,7 @@ module "root_management_group_policy_assigment_not_requiring_managed_identity" {
 }
 
 module "root_management_group_policy_assigment_requiring_managed_identity" {
-  for_each            = { for policy in local.policies_requiring_managed_identity : policy.name => policy }
+  for_each            = { for policy in local.policy_assignment_requiring_managed_identity : policy.name => policy }
   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment-with-managed-identity"
   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
   name                = each.value.name
@@ -212,8 +127,8 @@ module "root_management_group_policy_assigment_requiring_managed_identity" {
   }
 }
 
-// static builtin policy assignment
-module "root_management_group_policy_assigment_allowed_locations" {
+// static builtin policy assignment no need to create policy only assign
+module "root_management_group_builtin_policy_assigment_allowed_locations" {
   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment-no-managed-identity"
   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
   name                = "Allowed-locations"
@@ -225,6 +140,31 @@ module "root_management_group_policy_assigment_allowed_locations" {
     }
   }
   PARAMETERS
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+// with or without managed id should be managed_identity = true
+module "root_management_group_builtin_policy_assigment_nist" {
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment-with-managed-identity"
+  management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
+  name                = "NIST-SP-800-53-rev-5"
+  policy_id           = "/providers/Microsoft.Authorization/policySetDefinitions/179d1daa-458f-4e47-8086-2a68d0d6c38f"
+  //managed_identity    = true
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+module "root_management_group_builtin_policy_assigment_cis" {
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment-no-managed-identity"
+  management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
+  name                = "CIS-Benchmark-v1.4.0"
+  policy_id           = "/providers/Microsoft.Authorization/policySetDefinitions/c3f5c4d9-9a1d-4a99-85c0-7f93e384d5c5"
+
 
   providers = {
     azurerm = azurerm
@@ -249,9 +189,7 @@ module "root_management_group_policy_assigment_allowed_locations" {
 #   archetype = "management"
 # }
 
-
 // -------------------
-
 
 // roots for level 2 of hierarchy, also defined decomissioned and sandboxes but are not in use right now
 module "organisational_management_groups" {
@@ -277,7 +215,6 @@ module "platform_management_groups" {
   }
 }
 
-
 // data model returns management level policies
 # module "management_management_groups_policy_factory" {
 #   source = "../terraform-azure-alz-core-platform-management-group-policy-factory"
@@ -295,7 +232,6 @@ module "platform_management_groups" {
 #     azurerm = azurerm
 #   }
 # }
-
 
 // -------------------
 
