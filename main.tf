@@ -1,10 +1,9 @@
 locals {
   empty_map = {}
   management_groups = {
-    root         = ["MyOrg"]
     organisation = ["Platform", "Landing zones", "Decommissioned", "Sandbox"]
     platform     = ["Identity", "Management", "Connectivity"]
-    landingzone  = ["Corp", "Online"]
+    application  = ["Corp", "Online"]
   }
 }
 
@@ -13,9 +12,8 @@ data "azurerm_client_config" "core" {}
 // org root level 1 created under "Tenant Root Group" when no parent_id provided
 // can remove myorg from all of the module names
 module "root_management_group" {
-
-  source            = "../terraform-azure-alz-management-group"
-  management_groups = local.management_groups["root"]
+  source       = "../terraform-azure-alz-management-group"
+  display_name = "MyOrg"
 
   providers = {
     azurerm = azurerm
@@ -25,7 +23,7 @@ module "root_management_group" {
 // data model generation of custom and built in policy for archetype platform wide policy maintains independent versioning
 module "root_management_group_policy_factory" {
   source    = "../terraform-azure-alz-core-platform-management-group-policy-factory"
-  scope     = module.root_management_group.parent_ids["MyOrg"]
+  scope     = module.root_management_group.id
   archetype = "root"
 }
 
@@ -43,7 +41,7 @@ module "root_management_group_policy_definitions" {
   policy_rule         = try(length(each.value.properties.policyRule) > 0, false) ? jsonencode(each.value.properties.policyRule) : null
   metadata            = try(length(each.value.properties.metadata) > 0, false) ? jsonencode(each.value.properties.metadata) : null
   parameters          = try(length(each.value.properties.parameters) > 0, false) ? jsonencode(each.value.properties.parameters) : null
-  management_group_id = try(each.value.scope_id, module.root_management_group.parent_ids["MyOrg"])
+  management_group_id = try(each.value.scope_id, module.root_management_group.id)
 
   providers = {
     azurerm = azurerm
@@ -57,7 +55,7 @@ module "root_management_group_policy_initiatives" {
   name       = each.value.name
   properties = each.value.properties
 
-  management_group_id = try(each.value.scope_id, module.root_management_group.parent_ids["MyOrg"])
+  management_group_id = try(each.value.scope_id, module.root_management_group.id)
 
   depends_on = [
     module.root_management_group_policy_definitions
@@ -69,98 +67,119 @@ module "root_management_group_policy_initiatives" {
 }
 
 // WORKING HERE
-# locals {
-#   policy_assignment_requiring_managed_identity = [
-#     for _, policy in module.root_management_group_policy_initiatives :
-#     policy.deployed_initiative if contains(keys(module.root_management_group_policy_factory.managed_identity_role_assignments), policy.deployed_initiative.name)
-#   ]
+locals {
 
-#   policy_assignment_not_requiring_managed_identity = [
-#     for _, policy in module.root_management_group_policy_initiatives :
-#     policy.deployed_initiative if !contains(keys(module.root_management_group_policy_factory.managed_identity_role_assignments), policy.deployed_initiative.name)
-#   ]
-# }
+  /*
+   + managed_identity_policy_assignments = [
+      + {
+          + id               = (known after apply)
+          + managed_identity = (known after apply)
+          + name             = (known after apply)
+        },
+      + {
+          + id               = (known after apply)
+          + managed_identity = (known after apply)
+          + name             = (known after apply)
+        },
+    ]
+ */
+  managed_identity_policy_assignments = [
+    for file in module.root_management_group_policy_factory.policy_files : {
+      name             = module.root_management_group_policy_initiatives[file].deployed_initiative.name
+      id               = module.root_management_group_policy_initiatives[file].deployed_initiative.id
+      managed_identity = contains(keys(module.root_management_group_policy_factory.managed_identity_role_assignments), module.root_management_group_policy_initiatives[file].deployed_initiative.name) ? true : false
+    }
+  ]
+}
 
-# // dynamic custom policy assignment
-# module "root_management_group_policy_assigment_not_requiring_managed_identity" {
-#   for_each            = { for policy in local.policy_assignment_not_requiring_managed_identity : policy.name => policy }
-#   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
-#   management_group_id = module.root_management_group.parent_ids["MyOrg"]
-#   name                = each.value.name
-#   policy_id           = each.value.id
-#   parameters          = jsonencode(try(module.root_management_group_policy_factory.parameters[each.value.name].params, {}))
-#   managed_identity    = false
+output "managed_identity_policy_assignments" {
+  value = local.managed_identity_policy_assignments
+}
 
-#   depends_on = [
-#     module.root_management_group_policy_initiatives
-#   ]
+// dynamic custom policy assignment, terraform must know any map's key at apply time for addressing purposes using index keeps this deterministic
+module "root_management_group_policy_assigment" {
+  for_each            = { for index, policy in local.managed_identity_policy_assignments : index => policy }
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
+  management_group_id = module.root_management_group.id
+  name                = each.value.name
+  policy_id           = each.value.id
+  parameters          = jsonencode(try(module.root_management_group_policy_factory.parameters[each.value.name].params, {}))
+  managed_identity    = each.value.managed_identity
 
-#   providers = {
-#     azurerm = azurerm
-#   }
-# }
+  depends_on = [
+    module.root_management_group_policy_initiatives
+  ]
 
-# module "root_management_group_policy_assigment_requiring_managed_identity" {
-#   for_each            = { for policy in local.policy_assignment_requiring_managed_identity : policy.name => policy }
-#   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
-#   management_group_id = module.root_management_group.parent_ids["MyOrg"]
-#   name                = each.value.name
-#   policy_id           = each.value.id
-#   parameters          = jsonencode(try(module.root_management_group_policy_factory.parameters[each.value.name].params, {}))
-#   managed_identity    = true
+  providers = {
+    azurerm = azurerm
+  }
+}
 
-#   depends_on = [
-#     module.root_management_group_policy_initiatives
-#   ]
+locals {
 
-#   providers = {
-#     azurerm = azurerm
-#   }
-# }
+  // data structure to extra dynamically determined policy identity to a policy name
+  /*
+  + assignments  = {
+      + Deploy-MDFC-Config     = "1234...1234"
+      + Enforce-EncryptTransit = "1234...1234"
+    }
+  */
+  managed_identity_principal_ids = {
+    for _, policy in module.root_management_group_policy_assigment :
+    (policy.assignment.name) => policy.assignment.identity[0].principal_id
+  }
 
-# locals {
-#   /* builds this data structure for applying role assignments to policy managed identities
-#     + principal_ids      = [
-#       + {
-#           + Deploy-MDFC-Config-Contributor      = {
-#               + id   = "XXXX...1234"
-#               + name = "Deploy-MDFC-Config"
-#               + role = "Contributor"
-#             }
-#           + "Deploy-MDFC-Config-Security Admin" = {
-#               + id   = "XXXX...1234"
-#               + name = "Deploy-MDFC-Config"
-#               + role = "Security Admin"
-#             }
-#         },
-#     ]
-#   */
 
-#   roles_for_policy_assignment_managed_identity = [
-#     for policy_name, roles in module.root_management_group_policy_factory.managed_identity_role_assignments : {
-#       for role_name in roles :
-#       "${policy_name}-${role_name}" => {
-#         policy_name  = policy_name
-#         role_name    = role_name
-#         principal_id = module.root_management_group_policy_assigment_requiring_managed_identity[policy_name].identity[0].principal_id
-#       }
-#       // if removes empty {} from object
-#     } if length(roles) > 0 && contains(keys(module.root_management_group_policy_assigment_requiring_managed_identity), policy_name)
-#   ]
-# }
+  // data structure for applying role assignments to policy managed identities
+  /* 
+    + principal_ids      = [
+      + {
+          + Deploy-MDFC-Config-Contributor      = {
+              + principal_id   = "1234...1234"
+              + policy_name    = "Deploy-MDFC-Config"
+              + role_name      = "Contributor"
+            }
+          + "Deploy-MDFC-Config-Security Admin" = {
+              + principal_id   = "1234...1234"
+              + policy_name    = "Deploy-MDFC-Config"
+              + role_name      = "Security Admin"
+            }
+        },
+    ]
+  */
+  managed_identity_policy_assignment_roles = [
+    for policy_name, roles in module.root_management_group_policy_factory.managed_identity_role_assignments : {
+      for role_name in roles :
+      "${policy_name}-${role_name}" => {
+        policy_name  = policy_name
+        role_name    = role_name
+        principal_id = local.managed_identity_principal_ids[policy_name]
+      }
+      // if removes empty {} from object
+    } if length(roles) > 0
+  ]
+}
 
-# // role assignment for policy
-# module "root_management_group_role_assignment_for_policy_assignment_managed_identitities" {
-#   for_each     = local.roles_for_policy_assignment_managed_identity[0]
-#   source       = "../terraform-azure-alz-role-assignment"
-#   principal_id = each.value.principal_id
-#   role_name    = each.value.role_name
-#   scope        = module.root_management_group.parent_ids["MyOrg"]
+output "an_assignments" {
+  value = local.managed_identity_principal_ids
+}
 
-#   providers = {
-#     azurerm = azurerm
-#   }
-# }
+output "role_assigments" {
+  value = local.managed_identity_policy_assignment_roles
+}
+
+// role assignment for policy
+module "root_management_group_role_assignment_for_policy_assignment_managed_identitities" {
+  for_each     = local.managed_identity_policy_assignment_roles[0]
+  source       = "../terraform-azure-alz-role-assignment"
+  principal_id = each.value.principal_id
+  role_name    = each.value.role_name
+  scope        = module.root_management_group.id
+
+  providers = {
+    azurerm = azurerm
+  }
+}
 // WORKING HERE --END
 // required by caf tbd there is a policy assignemnt at this scope 
 
@@ -175,9 +194,10 @@ module "root_management_group_policy_initiatives" {
 
 // roots for level 2 of hierarchy, also defined decomissioned and sandboxes but are not in use right now
 module "organisational_management_groups" {
-  source            = "../terraform-azure-alz-management-group"
-  management_groups = local.management_groups["organisation"]
-  parent_id         = module.root_management_group.parent_ids["MyOrg"]
+  for_each     = toset(local.management_groups.organisation)
+  source       = "../terraform-azure-alz-management-group"
+  display_name = each.value
+  parent_id    = module.root_management_group.id
 
   providers = {
     azurerm = azurerm
@@ -188,9 +208,10 @@ module "organisational_management_groups" {
 
 // roots for level 3
 module "platform_management_groups" {
-  source            = "../terraform-azure-alz-management-group"
-  management_groups = local.management_groups["platform"]
-  parent_id         = module.organisational_management_groups.parent_ids["Platform"]
+  for_each     = toset(local.management_groups.platform)
+  source       = "../terraform-azure-alz-management-group"
+  display_name = each.value
+  parent_id    = module.organisational_management_groups["Platform"].id
 
   providers = {
     azurerm = azurerm
@@ -219,9 +240,10 @@ module "platform_management_groups" {
 
 // secondary level 3 roots
 module "application_management_groups" {
-  source            = "../terraform-azure-alz-management-group"
-  management_groups = local.management_groups["landingzone"]
-  parent_id         = module.organisational_management_groups.parent_ids["Landing zones"]
+  for_each     = toset(local.management_groups.application)
+  source       = "../terraform-azure-alz-management-group"
+  display_name = each.value
+  parent_id    = module.organisational_management_groups["Landing zones"].id
 
   providers = {
     azurerm = azurerm
