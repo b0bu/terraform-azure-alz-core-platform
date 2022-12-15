@@ -12,7 +12,7 @@ data "azurerm_client_config" "core" {}
 
 // org root level 1 created under "Tenant Root Group" when no parent_id provided
 // can remove myorg from all of the module names
-module "myorg_root_management_group" {
+module "root_management_group" {
   source            = "../terraform-azure-alz-management-group"
   management_groups = local.management_groups["root"]
 
@@ -22,7 +22,7 @@ module "myorg_root_management_group" {
 }
 
 // data model generation of custom and built in policy for archetype platform wide policy maintains independent versioning
-module "myorg_root_management_group_policy_factory" {
+module "root_management_group_policy_factory" {
   source    = "../terraform-azure-alz-core-platform-management-group-policy-factory"
   scope     = module.myorg_root_management_group.parent_ids["MyOrg"]
   archetype = "root"
@@ -30,7 +30,7 @@ module "myorg_root_management_group_policy_factory" {
 
 // create custom policy definitions returning their ids
 // checking of values to be done in the module, sos to make consumption of the module easier
-module "myorg_root_management_group_policy_definitions" {
+module "root_management_group_policy_definitions" {
   for_each = module.myorg_root_management_group_policy_factory.definitions
 
   source       = "../terraform-azure-alz-core-platform-management-group-policy-definitions"
@@ -49,7 +49,7 @@ module "myorg_root_management_group_policy_definitions" {
   }
 }
 
-module "myorg_root_management_group_policy_initiatives" {
+module "root_management_group_policy_initiatives" {
   for_each = module.myorg_root_management_group_policy_factory.initiatives
 
   source     = "../terraform-azure-alz-core-platform-management-group-policy-initiatives"
@@ -88,7 +88,6 @@ module "log_analytics_workspace" {
 }
 
 locals {
-
   policy_assignment_requiring_managed_identity = [
     for _, policy in module.myorg_root_management_group_policy_initiatives :
     policy.deployed_initiative if contains(keys(module.myorg_root_management_group_policy_factory.managed_identity_role_assignments), policy.deployed_initiative.name)
@@ -129,50 +128,6 @@ module "root_management_group_policy_assigment_requiring_managed_identity" {
   }
 }
 
-// static builtin policy assignment
-module "root_management_group_builtin_policy_assigment_allowed_locations" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
-  management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
-  name                = "Allowed-locations"
-  policy_id           = "/providers/Microsoft.Authorization/policyDefinitions/e56962a6-4747-49cd-b67b-bf8b01975c4c"
-  parameters          = <<PARAMETERS
-  {
-    "listOfAllowedLocations":{
-        "value": ["uksouth","ukwest","global"]
-    }
-  }
-  PARAMETERS
-  managed_identity    = false
-
-  providers = {
-    azurerm = azurerm
-  }
-}
-
-module "root_management_group_builtin_policy_assigment_nist" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
-  management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
-  name                = "NIST-SP-800-53-rev-5"
-  policy_id           = "/providers/Microsoft.Authorization/policySetDefinitions/179d1daa-458f-4e47-8086-2a68d0d6c38f"
-  managed_identity    = true
-
-  providers = {
-    azurerm = azurerm
-  }
-}
-
-module "root_management_group_builtin_policy_assigment_cis" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
-  management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
-  name                = "CIS-Benchmark-v1.4.0"
-  policy_id           = "/providers/Microsoft.Authorization/policySetDefinitions/c3f5c4d9-9a1d-4a99-85c0-7f93e384d5c5"
-  managed_identity    = false
-
-  providers = {
-    azurerm = azurerm
-  }
-}
-
 locals {
   /* builds this data structure for applying role assignments to policy managed identities
     + principal_ids      = [
@@ -205,7 +160,7 @@ locals {
 }
 
 // role assignment for policy
-module "root_management_group_role_assignments_for_policy_assignment_managed_identitities" {
+module "root_management_group_role_assignment_for_policy_assignment_managed_identitities" {
   for_each     = local.roles_for_policy_assignment_managed_identity[0]
   source       = "../terraform-azure-alz-role-assignment"
   principal_id = each.value.principal_id
