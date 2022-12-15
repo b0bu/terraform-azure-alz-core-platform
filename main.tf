@@ -103,11 +103,12 @@ locals {
 // dynamic custom policy assignment
 module "root_management_group_policy_assigment_not_requiring_managed_identity" {
   for_each            = { for policy in local.policy_assignment_not_requiring_managed_identity : policy.name => policy }
-  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment-no-managed-identity"
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
   name                = each.value.name
   policy_id           = each.value.id
   parameters          = jsonencode(try(module.myorg_root_management_group_policy_factory.parameters[each.value.name].params, {}))
+  managed_identity    = false
 
   providers = {
     azurerm = azurerm
@@ -116,11 +117,12 @@ module "root_management_group_policy_assigment_not_requiring_managed_identity" {
 
 module "root_management_group_policy_assigment_requiring_managed_identity" {
   for_each            = { for policy in local.policy_assignment_requiring_managed_identity : policy.name => policy }
-  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment-with-managed-identity"
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
   name                = each.value.name
   policy_id           = each.value.id
   parameters          = jsonencode(try(module.myorg_root_management_group_policy_factory.parameters[each.value.name].params, {}))
+  managed_identity    = true
 
   providers = {
     azurerm = azurerm
@@ -129,7 +131,7 @@ module "root_management_group_policy_assigment_requiring_managed_identity" {
 
 // static builtin policy assignment no need to create policy only assign
 module "root_management_group_builtin_policy_assigment_allowed_locations" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment-no-managed-identity"
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
   name                = "Allowed-locations"
   policy_id           = "/providers/Microsoft.Authorization/policyDefinitions/e56962a6-4747-49cd-b67b-bf8b01975c4c"
@@ -140,6 +142,7 @@ module "root_management_group_builtin_policy_assigment_allowed_locations" {
     }
   }
   PARAMETERS
+  managed_identity    = false
 
   providers = {
     azurerm = azurerm
@@ -148,11 +151,11 @@ module "root_management_group_builtin_policy_assigment_allowed_locations" {
 
 // with or without managed id should be managed_identity = true
 module "root_management_group_builtin_policy_assigment_nist" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment-with-managed-identity"
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
   name                = "NIST-SP-800-53-rev-5"
   policy_id           = "/providers/Microsoft.Authorization/policySetDefinitions/179d1daa-458f-4e47-8086-2a68d0d6c38f"
-  //managed_identity    = true
+  managed_identity    = true
 
   providers = {
     azurerm = azurerm
@@ -160,11 +163,11 @@ module "root_management_group_builtin_policy_assigment_nist" {
 }
 
 module "root_management_group_builtin_policy_assigment_cis" {
-  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment-no-managed-identity"
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
   name                = "CIS-Benchmark-v1.4.0"
   policy_id           = "/providers/Microsoft.Authorization/policySetDefinitions/c3f5c4d9-9a1d-4a99-85c0-7f93e384d5c5"
-
+  managed_identity    = false
 
   providers = {
     azurerm = azurerm
