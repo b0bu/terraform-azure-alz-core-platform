@@ -28,7 +28,6 @@ module "root_management_group_policy_factory" {
 }
 
 // create custom policy definitions returning their ids
-// checking of values to be done in the module, sos to make consumption of the module easier
 module "root_management_group_policy_definitions" {
   for_each = module.root_management_group_policy_factory.definitions
 
@@ -66,23 +65,8 @@ module "root_management_group_policy_initiatives" {
   }
 }
 
-// WORKING HERE
 locals {
-
-  /*
-   + managed_identity_policy_assignments = [
-      + {
-          + id               = (known after apply)
-          + managed_identity = (known after apply)
-          + name             = (known after apply)
-        },
-      + {
-          + id               = (known after apply)
-          + managed_identity = (known after apply)
-          + name             = (known after apply)
-        },
-    ]
- */
+  // data structure to extra dynamically custom initiatives and whether they should have a managed identity or not
   managed_identity_policy_assignments = [
     for file in module.root_management_group_policy_factory.policy_files : {
       name             = module.root_management_group_policy_initiatives[file].deployed_initiative.name
@@ -90,10 +74,6 @@ locals {
       managed_identity = contains(keys(module.root_management_group_policy_factory.managed_identity_role_assignments), module.root_management_group_policy_initiatives[file].deployed_initiative.name) ? true : false
     }
   ]
-}
-
-output "managed_identity_policy_assignments" {
-  value = local.managed_identity_policy_assignments
 }
 
 // dynamic custom policy assignment, terraform must know any map's key at apply time for addressing purposes using index keeps this deterministic
@@ -116,37 +96,13 @@ module "root_management_group_policy_assigment" {
 }
 
 locals {
-
   // data structure to extra dynamically determined policy identity to a policy name
-  /*
-  + assignments  = {
-      + Deploy-MDFC-Config     = "1234...1234"
-      + Enforce-EncryptTransit = "1234...1234"
-    }
-  */
   managed_identity_principal_ids = {
     for _, policy in module.root_management_group_policy_assigment :
     (policy.assignment.name) => policy.assignment.identity[0].principal_id
   }
 
-
   // data structure for applying role assignments to policy managed identities
-  /* 
-    + principal_ids      = [
-      + {
-          + Deploy-MDFC-Config-Contributor      = {
-              + principal_id   = "1234...1234"
-              + policy_name    = "Deploy-MDFC-Config"
-              + role_name      = "Contributor"
-            }
-          + "Deploy-MDFC-Config-Security Admin" = {
-              + principal_id   = "1234...1234"
-              + policy_name    = "Deploy-MDFC-Config"
-              + role_name      = "Security Admin"
-            }
-        },
-    ]
-  */
   managed_identity_policy_assignment_roles = [
     for policy_name, roles in module.root_management_group_policy_factory.managed_identity_role_assignments : {
       for role_name in roles :
@@ -158,14 +114,6 @@ locals {
       // if removes empty {} from object
     } if length(roles) > 0
   ]
-}
-
-output "an_assignments" {
-  value = local.managed_identity_principal_ids
-}
-
-output "role_assigments" {
-  value = local.managed_identity_policy_assignment_roles
 }
 
 // role assignment for policy
@@ -180,7 +128,7 @@ module "root_management_group_role_assignment_for_policy_assignment_managed_iden
     azurerm = azurerm
   }
 }
-// WORKING HERE --END
+
 // required by caf tbd there is a policy assignemnt at this scope 
 
 // data model generation of custom and built in policy for archetype platform wide policy maintains independent versioning
