@@ -199,7 +199,7 @@ locals {
         role_name    = role_name
         principal_id = module.root_management_group_policy_assigment_requiring_managed_identity[policy_name].identity[0].principal_id
       }
-      // if removes empty {}
+      // if removes empty {} from object
     } if length(roles) > 0 && contains(keys(module.root_management_group_policy_assigment_requiring_managed_identity), policy_name)
   ]
 }
