@@ -129,7 +129,7 @@ module "root_management_group_policy_assigment_requiring_managed_identity" {
   }
 }
 
-// static builtin policy assignment no need to create policy only assign
+// static builtin policy assignment
 module "root_management_group_builtin_policy_assigment_allowed_locations" {
   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
@@ -149,7 +149,6 @@ module "root_management_group_builtin_policy_assigment_allowed_locations" {
   }
 }
 
-// with or without managed id should be managed_identity = true
 module "root_management_group_builtin_policy_assigment_nist" {
   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
   management_group_id = module.myorg_root_management_group.parent_ids["MyOrg"]
@@ -174,14 +173,49 @@ module "root_management_group_builtin_policy_assigment_cis" {
   }
 }
 
-// NOW I CARE ABOUT THE PRINCIPAL OUTPUT OF THE ASSIGNMENT FOR THE ROLE
+locals {
+  /* builds this data structure for applying role assignments to policy managed identities
+    + principal_ids      = [
+      + {
+          + Deploy-MDFC-Config-Contributor      = {
+              + id   = "XXXX...1234"
+              + name = "Deploy-MDFC-Config"
+              + role = "Contributor"
+            }
+          + "Deploy-MDFC-Config-Security Admin" = {
+              + id   = "XXXX...1234"
+              + name = "Deploy-MDFC-Config"
+              + role = "Security Admin"
+            }
+        },
+    ]
+  */
 
-// which roles belong to which policies and at which scope
-# module "myorg_root_management_group_policy_role_assignment" {
-#   source     = "../terraform-azure-alz-role-assignment-for-policy"
-#   principals = module.myorg_root_management_group_custom_policy_assigment.principal_ids
-#   //policy_roles        = module.myorg_root_management_group_policy.azurerm_role_assignments
-# }
+  roles_for_policy_assignment_managed_identity = [
+    for policy_name, roles in module.myorg_root_management_group_policy_factory.azurerm_role_assignments : {
+      for role_name in roles :
+      "${policy_name}-${role_name}" => {
+        policy_name  = policy_name
+        role_name    = role_name
+        principal_id = module.root_management_group_policy_assigment_requiring_managed_identity[policy_name].identity[0].principal_id
+      }
+      // if removes empty {}
+    } if length(roles) > 0 && contains(keys(module.root_management_group_policy_assigment_requiring_managed_identity), policy_name)
+  ]
+}
+
+// role assignment for policy
+module "root_management_group_role_assignments_for_policy_assignment_managed_identitities" {
+  for_each     = local.roles_for_policy_assignment_managed_identity[0]
+  source       = "../terraform-azure-alz-role-assignment"
+  principal_id = each.value.principal_id
+  role_name    = each.value.role_name
+  scope        = module.myorg_root_management_group.parent_ids["MyOrg"]
+
+  providers = {
+    azurerm = azurerm
+  }
+}
 
 // required by caf tbd there is a policy assignemnt at this scope 
 
