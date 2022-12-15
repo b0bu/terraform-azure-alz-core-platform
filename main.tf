@@ -66,7 +66,7 @@ module "root_management_group_policy_initiatives" {
 }
 
 locals {
-  // data structure to extra dynamically custom initiatives and whether they should have a managed identity or not
+  // data structure to extract dynamically custom initiatives and whether they should have a managed identity or not
   managed_identity_policy_assignments = [
     for file in module.root_management_group_policy_factory.list_of_policy_initiative_file_names : {
       name             = module.root_management_group_policy_initiatives[file].deployed_initiative.name
@@ -96,7 +96,7 @@ module "root_management_group_policy_assigment" {
 }
 
 locals {
-  // data structure to extra dynamically determined policy identity to a policy name
+  // data structure to extract dynamically determined policy identity to a policy name
   managed_identity_principal_ids = {
     for _, policy in module.root_management_group_policy_assigment :
     (policy.assignment.name) => policy.assignment.identity[0].principal_id
