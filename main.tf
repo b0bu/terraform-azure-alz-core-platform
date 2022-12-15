@@ -91,12 +91,12 @@ locals {
 
   policy_assignment_requiring_managed_identity = [
     for _, policy in module.myorg_root_management_group_policy_initiatives :
-    policy.deployed_initiative if contains(keys(module.myorg_root_management_group_policy_factory.azurerm_role_assignments), policy.deployed_initiative.name)
+    policy.deployed_initiative if contains(keys(module.myorg_root_management_group_policy_factory.managed_identity_role_assignments), policy.deployed_initiative.name)
   ]
 
   policy_assignment_not_requiring_managed_identity = [
     for _, policy in module.myorg_root_management_group_policy_initiatives :
-    policy.deployed_initiative if !contains(keys(module.myorg_root_management_group_policy_factory.azurerm_role_assignments), policy.deployed_initiative.name)
+    policy.deployed_initiative if !contains(keys(module.myorg_root_management_group_policy_factory.managed_identity_role_assignments), policy.deployed_initiative.name)
   ]
 }
 
@@ -192,7 +192,7 @@ locals {
   */
 
   roles_for_policy_assignment_managed_identity = [
-    for policy_name, roles in module.myorg_root_management_group_policy_factory.azurerm_role_assignments : {
+    for policy_name, roles in module.myorg_root_management_group_policy_factory.managed_identity_role_assignments : {
       for role_name in roles :
       "${policy_name}-${role_name}" => {
         policy_name  = policy_name
