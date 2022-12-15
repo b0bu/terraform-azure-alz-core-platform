@@ -68,7 +68,7 @@ module "root_management_group_policy_initiatives" {
 locals {
   // data structure to extra dynamically custom initiatives and whether they should have a managed identity or not
   managed_identity_policy_assignments = [
-    for file in module.root_management_group_policy_factory.policy_files : {
+    for file in module.root_management_group_policy_factory.list_of_policy_initiative_file_names : {
       name             = module.root_management_group_policy_initiatives[file].deployed_initiative.name
       id               = module.root_management_group_policy_initiatives[file].deployed_initiative.id
       managed_identity = contains(keys(module.root_management_group_policy_factory.managed_identity_role_assignments), module.root_management_group_policy_initiatives[file].deployed_initiative.name) ? true : false
