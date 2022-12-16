@@ -71,18 +71,23 @@ locals {
     for file in module.root_management_group_policy_factory.list_of_policy_initiative_file_names : {
       name             = module.root_management_group_policy_initiatives[file].deployed_initiative.name
       id               = module.root_management_group_policy_initiatives[file].deployed_initiative.id
+      display_name     = module.root_management_group_policy_initiatives[file].deployed_initiative.display_name
+      description      = module.root_management_group_policy_initiatives[file].deployed_initiative.description
       managed_identity = contains(keys(module.root_management_group_policy_factory.managed_identity_role_assignments), module.root_management_group_policy_initiatives[file].deployed_initiative.name) ? true : false
     }
   ]
 }
 
 // dynamic custom policy assignment, terraform must know any map's key at apply time for addressing purposes using index keeps this deterministic
+// rename this to root_management_group_initiative_assigment
 module "root_management_group_policy_assigment" {
   for_each            = { for index, policy in local.managed_identity_policy_assignments : index => policy }
   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
   management_group_id = module.root_management_group.id
   name                = each.value.name
   policy_id           = each.value.id
+  display_name        = each.value.display_name
+  description         = each.value.description
   parameters          = jsonencode(try(module.root_management_group_policy_factory.parameters[each.value.name].params, {}))
   managed_identity    = each.value.managed_identity
 
@@ -117,6 +122,7 @@ locals {
 }
 
 // role assignment for policy
+// rename this to root_management_group_role_assignment_for_initiative_assignment_managed_identitities
 module "root_management_group_role_assignment_for_policy_assignment_managed_identitities" {
   for_each     = local.managed_identity_policy_assignment_roles[0]
   source       = "../terraform-azure-alz-role-assignment"
