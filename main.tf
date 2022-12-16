@@ -105,7 +105,8 @@ locals {
   managed_identity_principal_ids = {
     for _, policy in module.root_management_group_policy_assigment :
     (policy.assignment.name) => policy.assignment.identity[0].principal_id
-  }
+    if contains(keys(module.root_management_group_policy_factory.managed_identity_role_assignments), policy.assignment.name)
+  } 
 
   // data structure for applying role assignments to policy managed identities
   managed_identity_policy_assignment_roles = [
