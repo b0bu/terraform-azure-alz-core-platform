@@ -1,5 +1,5 @@
+// all root module data structures can be viewed with terraform output
 locals {
-  empty_map = {}
   management_groups = {
     organisation = ["Platform", "Landing zones", "Decommissioned", "Sandbox"]
     platform     = ["Identity", "Management", "Connectivity"]
@@ -9,8 +9,7 @@ locals {
 
 data "azurerm_client_config" "core" {}
 
-// org root level 1 created under "Tenant Root Group" when no parent_id provided
-// can remove myorg from all of the module names
+// created under "Tenant Root Group" when no parent_id provided
 module "root_management_group" {
   source       = "../terraform-azure-alz-management-group"
   display_name = "MyOrg"
@@ -20,14 +19,14 @@ module "root_management_group" {
   }
 }
 
-// data model generation of custom and built in policy for archetype platform wide policy maintains independent versioning
+// data model generation of custom policy
 module "root_management_group_policy_factory" {
   source    = "../terraform-azure-alz-core-platform-management-group-policy-factory"
   scope     = module.root_management_group.id
   archetype = "root"
 }
 
-// create custom policy definitions returning their ids
+// create the custom policy definitions returning their ids
 module "root_management_group_policy_definitions" {
   for_each = module.root_management_group_policy_factory.definitions
 
@@ -48,8 +47,7 @@ module "root_management_group_policy_definitions" {
 }
 
 locals {
-  // override any dummy parameter value used to satisfy the interface with a real value
-  // use this as example in readme for ovverides, if parameters is empty should work all the same
+  // overrides for any dummy parameter values used to satisfy the interface; replace with real values here
   overrides = {
     logAnalytics = {
       value = module.log_analytics_workspace.id
@@ -61,6 +59,7 @@ locals {
   }
 }
 
+// create the custom policy initiatives returning their ids
 module "root_management_group_policy_initiatives" {
   for_each = module.root_management_group_policy_factory.initiatives
 
@@ -80,7 +79,7 @@ module "root_management_group_policy_initiatives" {
 }
 
 locals {
-  // data structure to extract dynamically custom initiatives and whether they should have a managed identity or not
+  // data structure to extract dynamically created custom initiatives and whether they should have a managed identity set or not
   managed_identity_policy_assignments = [
     for file in module.root_management_group_policy_factory.list_of_policy_initiative_file_names : {
       name             = module.root_management_group_policy_initiatives[file].deployed_initiative.name
@@ -102,7 +101,7 @@ module "root_management_group_policy_assigment" {
   policy_id           = each.value.id
   display_name        = each.value.display_name
   description         = each.value.description
-  // use local.parameter overrides if set else use module output paramaters
+  // use local.parameter overrides if set else use policy factory module output paramaters
   parameters          = contains(keys(local.parameters), each.value.name) ? jsonencode(local.parameters[each.value.name]) : jsonencode(try(module.root_management_group_policy_factory.parameters[each.value.name].params, null))
   managed_identity    = each.value.managed_identity
 
@@ -116,14 +115,14 @@ module "root_management_group_policy_assigment" {
 }
 
 locals {
-  // data structure to extract dynamically determined policy identity to a policy name
+  // data structure to extract dynamically determined policy identity created at runtime, and map to a policy name
   managed_identity_principal_ids = {
     for _, policy in module.root_management_group_policy_assigment :
     (policy.assignment.name) => policy.assignment.identity[0].principal_id
     if contains(keys(module.root_management_group_policy_factory.managed_identity_role_assignments), policy.assignment.name)
   }
 
-  // data structure for applying role assignments to policy managed identities
+  // data structure for applying role assignments for above managed identities
   managed_identity_policy_assignment_roles = [
     for policy_name, roles in module.root_management_group_policy_factory.managed_identity_role_assignments : {
       for role_name in roles :
@@ -137,7 +136,7 @@ locals {
   ]
 }
 
-// role assignment for policy
+// role assignment for policy dynamically generated policy
 // rename this to root_management_group_role_assignment_for_initiative_assignment_managed_identitities
 module "root_management_group_role_assignment_for_policy_assignment_managed_identitities" {
   for_each     = local.managed_identity_policy_assignment_roles[0]
