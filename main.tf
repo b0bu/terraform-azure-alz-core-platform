@@ -219,7 +219,7 @@ module "application_management_groups" {
   }
 }
 
-// ---- law for testing MDFC policy assignment 
+// temp law for testing policy assignments
 module "log_analytics_resource_group" {
   source   = "../terraform-azure-alz-resource-group"
   name     = "testing-law-MDFC-assignment"
