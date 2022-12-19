@@ -47,6 +47,20 @@ module "root_management_group_policy_definitions" {
   }
 }
 
+locals {
+  // override any dummy parameter value used to satisfy the interface with a real value
+  // use this as example in readme for ovverides, if parameters is empty should work all the same
+  overrides = {
+    logAnalytics = {
+      value = module.log_analytics_workspace.id
+    }
+  }
+  parameters = {
+    Deploy-MDFC-Config   = merge(module.root_management_group_policy_factory.parameters["Deploy-MDFC-Config"].params, local.overrides)
+    Deploy-Resource-Diag = merge(module.root_management_group_policy_factory.parameters["Deploy-Resource-Diag"].params, local.overrides)
+  }
+}
+
 module "root_management_group_policy_initiatives" {
   for_each = module.root_management_group_policy_factory.initiatives
 
@@ -88,7 +102,8 @@ module "root_management_group_policy_assigment" {
   policy_id           = each.value.id
   display_name        = each.value.display_name
   description         = each.value.description
-  parameters          = jsonencode(try(module.root_management_group_policy_factory.parameters[each.value.name].params, {}))
+  // use local.parameter overrides if set else use module output paramaters
+  parameters          = contains(keys(local.parameters), each.value.name) ? jsonencode(local.parameters[each.value.name]) : jsonencode(try(module.root_management_group_policy_factory.parameters[each.value.name].params, {}))
   managed_identity    = each.value.managed_identity
 
   depends_on = [
@@ -106,7 +121,7 @@ locals {
     for _, policy in module.root_management_group_policy_assigment :
     (policy.assignment.name) => policy.assignment.identity[0].principal_id
     if contains(keys(module.root_management_group_policy_factory.managed_identity_role_assignments), policy.assignment.name)
-  } 
+  }
 
   // data structure for applying role assignments to policy managed identities
   managed_identity_policy_assignment_roles = [
