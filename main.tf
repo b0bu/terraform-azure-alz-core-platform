@@ -205,23 +205,3 @@ module "application_management_groups" {
     azurerm = azurerm
   }
 }
-
-// temp law for testing policy assignments
-# module "log_analytics_resource_group" {
-#   source   = "../terraform-azure-alz-resource-group"
-#   name     = "testing-law-MDFC-assignment"
-#   location = "uksouth"
-#   providers = {
-#     azurerm = azurerm.sandbox
-#   }
-# }
-
-# module "log_analytics_workspace" {
-#   source   = "../terraform-azure-alz-loganalytics-workspace"
-#   name     = module.log_analytics_resource_group.name
-#   location = module.log_analytics_resource_group.location
-
-#   providers = {
-#     azurerm = azurerm.sandbox
-#   }
-# }
