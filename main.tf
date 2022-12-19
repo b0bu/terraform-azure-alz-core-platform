@@ -93,8 +93,7 @@ locals {
 }
 
 // dynamic custom policy assignment, terraform must know any map's key at apply time for addressing purposes using index keeps this deterministic
-// rename this to root_management_group_initiative_assigment
-module "root_management_group_policy_assigment" {
+module "root_management_group_initiative_assigment" {
   for_each            = { for index, policy in local.managed_identity_policy_assignments : index => policy }
   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
   management_group_id = module.root_management_group.id
@@ -138,8 +137,7 @@ locals {
 }
 
 // role assignment for policy dynamically generated policy
-// rename this to root_management_group_role_assignment_for_initiative_assignment_managed_identitities
-module "root_management_group_role_assignment_for_policy_assignment_managed_identitities" {
+module "root_management_group_role_assignment_for_initiative_assignment_managed_identitities" {
   for_each     = local.managed_identity_policy_assignment_roles[0]
   source       = "../terraform-azure-alz-role-assignment"
   principal_id = each.value.principal_id

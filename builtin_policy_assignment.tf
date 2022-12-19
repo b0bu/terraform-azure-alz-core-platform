@@ -375,8 +375,7 @@ module "root_management_group_role_assignment_for_policy_actvity_log_diagnostics
   }
 }
 
-// root_management_group_builtin_policy_configure_centralised_log_analytics_and_automation_accounts
-module "root_management_group_builtin_policy_configure_log_analytics_and_automation_accounts" {
+module "root_management_group_builtin_policy_configure_centralised_log_analytics_and_automation_accounts" {
   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
   management_group_id = module.platform_management_groups["Management"].id
   name                = "DeployLogAnalytics"
@@ -415,8 +414,7 @@ module "root_management_group_builtin_policy_configure_log_analytics_and_automat
   }
 }
 
-// root_management_group_role_assignment_for_policy_configure_centralised_log_analytics_and_automation_accounts
-module "root_management_group_role_assignment_for_policy_configure_log_analytics_and_automation_accounts" {
+module "root_management_group_role_assignment_for_policy_configure_centralised_log_analytics_and_automation_accounts" {
   source       = "../terraform-azure-alz-role-assignment"
   principal_id = module.root_management_group_builtin_policy_configure_log_analytics_and_automation_accounts.assignment.identity[0].principal_id
   role_name    = "Contributor"
