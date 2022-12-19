@@ -29,7 +29,7 @@ module "alz-connectivity-001" {
   }
 
   providers = {
-    azurerm = azurerm
+    azurerm = azurerm.subscription_factory
     azapi   = azapi
   }
 }
@@ -59,7 +59,7 @@ module "alz-connectivity-002" {
   }
 
   providers = {
-    azurerm = azurerm
+    azurerm = azurerm.subscription_factory
     azapi   = azapi
   }
 }
@@ -90,7 +90,7 @@ module "alz-identity-001" {
   }
 
   providers = {
-    azurerm = azurerm
+    azurerm = azurerm.subscription_factory
     azapi   = azapi
   }
 }
@@ -120,7 +120,7 @@ module "alz-management-001" {
   }
 
   providers = {
-    azurerm = azurerm
+    azurerm = azurerm.subscription_factory
     azapi   = azapi
   }
 }
@@ -151,7 +151,7 @@ module "alz-sandbox-001" {
   }
 
   providers = {
-    azurerm = azurerm
+    azurerm = azurerm.subscription_factory
     azapi   = azapi
   }
 }
@@ -181,7 +181,7 @@ module "alz-corp-001" {
   }
 
   providers = {
-    azurerm = azurerm
+    azurerm = azurerm.subscription_factory
     azapi   = azapi
   }
 }
