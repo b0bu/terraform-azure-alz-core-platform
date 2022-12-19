@@ -103,7 +103,7 @@ module "root_management_group_policy_assigment" {
   display_name        = each.value.display_name
   description         = each.value.description
   // use local.parameter overrides if set else use module output paramaters
-  parameters          = contains(keys(local.parameters), each.value.name) ? jsonencode(local.parameters[each.value.name]) : jsonencode(try(module.root_management_group_policy_factory.parameters[each.value.name].params, {}))
+  parameters          = contains(keys(local.parameters), each.value.name) ? jsonencode(local.parameters[each.value.name]) : jsonencode(try(module.root_management_group_policy_factory.parameters[each.value.name].params, null))
   managed_identity    = each.value.managed_identity
 
   depends_on = [
