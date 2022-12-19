@@ -207,7 +207,7 @@ module "root_management_group_builtin_policy_enable_azure_monitor_for_vms" {
   parameters          = <<PARAMETERS
   {
       "logAnalytics_1": {
-        "value": "${module.log_analytics_workspace.id}"
+        "value": "${module.centralised_logging_workspace.id}"
       }
   }
   PARAMETERS
@@ -240,7 +240,7 @@ module "root_management_group_builtin_policy_enable_azure_monitor_for_vmss" {
   parameters          = <<PARAMETERS
   {
       "logAnalytics_1": {
-        "value": "${module.log_analytics_workspace.id}"
+        "value": "${module.centralised_logging_workspace.id}"
       }
   }
   PARAMETERS
@@ -288,7 +288,7 @@ module "root_management_group_builtin_policy_configure_loganalytics_for_windows_
   parameters          = <<PARAMETERS
   {
       "logAnalytics": {
-        "value": "${module.log_analytics_workspace.id}"
+        "value": "${module.centralised_logging_workspace.id}"
       }
   }
   PARAMETERS
@@ -320,7 +320,7 @@ module "root_management_group_builtin_policy_configure_loganalytics_for_linux_ar
   parameters          = <<PARAMETERS
   {
       "logAnalytics": {
-        "value": "${module.log_analytics_workspace.id}"
+        "value": "${module.centralised_logging_workspace.id}"
       }
   }
   PARAMETERS
@@ -352,7 +352,7 @@ module "root_management_group_builtin_policy_actvity_log_diagnostics_to_log_anal
   parameters          = <<PARAMETERS
   {
       "logAnalytics": {
-        "value": "${module.log_analytics_workspace.id}"
+        "value": "${module.centralised_logging_workspace.id}"
       }
   }
   PARAMETERS
@@ -369,6 +369,53 @@ module "root_management_group_role_assignment_for_policy_actvity_log_diagnostics
   principal_id = module.root_management_group_builtin_policy_actvity_log_diagnostics_to_log_analytics_workspace.assignment.identity[0].principal_id
   role_name    = each.value
   scope        = module.root_management_group.id
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+module "root_management_group_builtin_policy_configure_log_analytics_and_automation_accounts" {
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
+  management_group_id = module.platform_management_groups["Management"].id
+  name                = "DeployLogAnalytics"
+  display_name        = "Configure Log Analytics workspace and automation account to centralize logs and monitoring"
+  description         = "Deploy resource group containing Log Analytics workspace and linked automation account to centralize logs and monitoring. The automation account is aprerequisite for solutions like Updates and Change Tracking."
+  policy_id           = "/providers/Microsoft.Authorization/policyDefinitions/8e3e61b3-0b32-22d5-4edf-55f87fdb5955"
+  parameters          = <<PARAMETERS
+  {
+      "automationAccountName": {
+        "value": "dummy-test"
+      },
+      "automationRegion": {
+        "value": "uksouth"
+      },
+      "dataRetention": {
+        "value": "90"
+      },
+      "rgName": {
+        "value": "${module.centralised_logging_workspace_rg.name}"
+      },
+      "workspaceName": {
+        "value": "${module.centralised_logging_workspace.name}"
+      },
+      "workspaceRegion": {
+        "value": "${module.centralised_logging_workspace.location}"
+      }
+  }
+  PARAMETERS
+  managed_identity    = true
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+module "root_management_group_role_assignment_for_policy_configure_log_analytics_and_automation_accounts" {
+  source       = "../terraform-azure-alz-role-assignment"
+  principal_id = module.root_management_group_builtin_policy_configure_log_analytics_and_automation_accounts.assignment.identity[0].principal_id
+  role_name    = "Contributor"
+  scope        = module.platform_management_groups["Management"].id
 
   providers = {
     azurerm = azurerm
