@@ -1,6 +1,7 @@
 // all root module data structures can be viewed with terraform output
 locals {
   management_groups = {
+    root         = "MyOrg"
     organisation = ["Platform", "Landing zones", "Decommissioned", "Sandbox"]
     platform     = ["Identity", "Management", "Connectivity"]
     application  = ["Corp", "Online"]
@@ -12,7 +13,7 @@ data "azurerm_client_config" "core" {}
 // created under "Tenant Root Group" when no parent_id provided
 module "root_management_group" {
   source       = "../terraform-azure-alz-management-group"
-  display_name = "MyOrg"
+  display_name = local.management_groups.root
 
   providers = {
     azurerm = azurerm
@@ -47,10 +48,10 @@ module "root_management_group_policy_definitions" {
 }
 
 locals {
-  // overrides for any dummy parameter values used to satisfy the interface; replace with real values here
+  // overrides for any dummy parameter values used to satisfy a policy parameter interface; replace with real values here
   overrides = {
     logAnalytics = {
-      value = module.log_analytics_workspace.id
+      value = module.centralised_logging_workspace.id
     }
   }
   parameters = {
@@ -150,18 +151,7 @@ module "root_management_group_role_assignment_for_policy_assignment_managed_iden
   }
 }
 
-// required by caf tbd there is a policy assignemnt at this scope 
-
-// data model generation of custom and built in policy for archetype platform wide policy maintains independent versioning
-# module "management_management_group_policy_factory" {
-#   source    = "../terraform-azure-alz-core-platform-management-group-policy-factory"
-#   scope     = module.root_management_group.parent_ids["Management"]
-#   archetype = "management"
-# }
-
-// -------------------
-
-// roots for level 2 of hierarchy, also defined decomissioned and sandboxes but are not in use right now
+// roots for level 2
 module "organisational_management_groups" {
   for_each     = toset(local.management_groups.organisation)
   source       = "../terraform-azure-alz-management-group"
@@ -172,8 +162,6 @@ module "organisational_management_groups" {
     azurerm = azurerm
   }
 }
-
-// -------------------
 
 // roots for level 3
 module "platform_management_groups" {
@@ -187,25 +175,24 @@ module "platform_management_groups" {
   }
 }
 
-// data model returns management level policies
-# module "management_management_groups_policy_factory" {
-#   source = "../terraform-azure-alz-core-platform-management-group-policy-factory"
-#   //version = 0.0.1
-#   archetype = "management"
-# }
+module "centralised_logging_workspace_rg" {
+  source   = "../terraform-azure-alz-resource-group"
+  name     = "${local.management_groups.root}-centralised-logging-workspace"
+  location = "uksouth"
+  providers = {
+    azurerm = azurerm.management
+  }
+}
 
-# module "platform_management_groups_management_policy_assignment" {
-#   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
-#   management_group_id = module.platform_management_groups.parent_ids["Management"]
-#   baseline_policy     = module.management_management_groups_policy_factory.baseline_policy
-#   custom_policy       = module.management_management_groups_policy_factory.custom_policy
+module "centralised_logging_workspace" {
+  source   = "../terraform-azure-alz-loganalytics-workspace"
+  name     = module.centralised_logging_workspace_rg.name
+  location = module.centralised_logging_workspace_rg.location
 
-#   providers = {
-#     azurerm = azurerm
-#   }
-# }
-
-// -------------------
+  providers = {
+    azurerm = azurerm.management
+  }
+}
 
 // secondary level 3 roots
 module "application_management_groups" {
@@ -220,21 +207,21 @@ module "application_management_groups" {
 }
 
 // temp law for testing policy assignments
-module "log_analytics_resource_group" {
-  source   = "../terraform-azure-alz-resource-group"
-  name     = "testing-law-MDFC-assignment"
-  location = "uksouth"
-  providers = {
-    azurerm = azurerm.sandbox
-  }
-}
+# module "log_analytics_resource_group" {
+#   source   = "../terraform-azure-alz-resource-group"
+#   name     = "testing-law-MDFC-assignment"
+#   location = "uksouth"
+#   providers = {
+#     azurerm = azurerm.sandbox
+#   }
+# }
 
-module "log_analytics_workspace" {
-  source   = "../terraform-azure-alz-loganalytics-workspace"
-  name     = module.log_analytics_resource_group.name
-  location = module.log_analytics_resource_group.location
+# module "log_analytics_workspace" {
+#   source   = "../terraform-azure-alz-loganalytics-workspace"
+#   name     = module.log_analytics_resource_group.name
+#   location = module.log_analytics_resource_group.location
 
-  providers = {
-    azurerm = azurerm.sandbox
-  }
-}
+#   providers = {
+#     azurerm = azurerm.sandbox
+#   }
+# }
