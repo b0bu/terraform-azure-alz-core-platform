@@ -271,7 +271,7 @@ module "root_management_group_builtin_policy_enable_monitoring_in_azure_security
   description         = "The Azure Security Benchmark initiative represents the policies and controls implementing security recommendations defined in Azure Security Benchmark v3, see https://aka.ms/azsecbm. This also serves as the Microsoft Defender for Cloud default policy initiative. You can directly assign this initiative, or manage its policies and compliance results within Microsoft Defender for Cloud."
   policy_id           = "/providers/Microsoft.Authorization/policySetDefinitions/1f3afdf9-d0c9-4c3d-847f-89da613e70a8"
 
-  managed_identity    = false
+  managed_identity = false
 
   providers = {
     azurerm = azurerm
@@ -416,7 +416,7 @@ module "root_management_group_builtin_policy_configure_centralised_log_analytics
 
 module "root_management_group_role_assignment_for_policy_configure_centralised_log_analytics_and_automation_accounts" {
   source       = "../terraform-azure-alz-role-assignment"
-  principal_id = module.root_management_group_builtin_policy_configure_log_analytics_and_automation_accounts.assignment.identity[0].principal_id
+  principal_id = module.root_management_group_builtin_policy_configure_centralised_log_analytics_and_automation_accounts.assignment.identity[0].principal_id
   role_name    = "Contributor"
   scope        = module.platform_management_groups["Management"].id
 

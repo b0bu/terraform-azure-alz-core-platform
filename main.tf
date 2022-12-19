@@ -102,8 +102,8 @@ module "root_management_group_initiative_assigment" {
   display_name        = each.value.display_name
   description         = each.value.description
   // use local.parameter overrides if set else use policy factory module output paramaters
-  parameters          = contains(keys(local.parameters), each.value.name) ? jsonencode(local.parameters[each.value.name]) : jsonencode(try(module.root_management_group_policy_factory.parameters[each.value.name].params, null))
-  managed_identity    = each.value.managed_identity
+  parameters       = contains(keys(local.parameters), each.value.name) ? jsonencode(local.parameters[each.value.name]) : jsonencode(try(module.root_management_group_policy_factory.parameters[each.value.name].params, null))
+  managed_identity = each.value.managed_identity
 
   depends_on = [
     module.root_management_group_policy_initiatives
@@ -117,7 +117,7 @@ module "root_management_group_initiative_assigment" {
 locals {
   // data structure to extract dynamically determined policy identity created at runtime, and map to a policy name
   managed_identity_principal_ids = {
-    for _, policy in module.root_management_group_policy_assigment :
+    for _, policy in module.root_management_group_initiative_assigment :
     (policy.assignment.name) => policy.assignment.identity[0].principal_id
     if contains(keys(module.root_management_group_policy_factory.managed_identity_role_assignments), policy.assignment.name)
   }
