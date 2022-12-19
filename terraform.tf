@@ -4,6 +4,9 @@ terraform {
       source  = "hashicorp/azurerm"
       version = ">= 3.0.2"
     }
+    azapi = {
+      source = "azure/azapi"
+    }
   }
   backend "azurerm" {
     resoure_group_name   = var.resource_group_name
