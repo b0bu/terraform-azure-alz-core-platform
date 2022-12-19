@@ -396,6 +396,9 @@ module "root_management_group_builtin_policy_configure_log_analytics_and_automat
       "rgName": {
         "value": "${module.centralised_logging_workspace_rg.name}"
       },
+      "sku": {
+        "value": "${module.centralised_logging_workspace.sku}"
+      },
       "workspaceName": {
         "value": "${module.centralised_logging_workspace.name}"
       },
