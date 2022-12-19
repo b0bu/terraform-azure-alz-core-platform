@@ -89,6 +89,18 @@ module "root_management_group_builtin_policy_inherit_project_tag_from_rg" {
   }
 }
 
+module "root_management_group_role_assignment_for_policy_inherit_project_tag_from_rg" {
+  source       = "../terraform-azure-alz-role-assignment"
+  principal_id = module.root_management_group_builtin_policy_inherit_project_tag_from_rg.assignment.identity[0].principal_id
+  role_name    = "Contributor"
+  scope        = module.root_management_group.id
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+
 module "root_management_group_builtin_policy_inherit_solution_tag_from_rg" {
   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
   management_group_id = module.root_management_group.id
@@ -104,6 +116,17 @@ module "root_management_group_builtin_policy_inherit_solution_tag_from_rg" {
   }
   PARAMETERS
   managed_identity    = true
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+module "root_management_group_role_assignment_for_policy_inherit_solution_tag_from_rg" {
+  source       = "../terraform-azure-alz-role-assignment"
+  principal_id = module.root_management_group_builtin_policy_inherit_solution_tag_from_rg.assignment.identity[0].principal_id
+  role_name    = "Contributor"
+  scope        = module.root_management_group.id
 
   providers = {
     azurerm = azurerm
@@ -174,11 +197,10 @@ module "root_management_group_builtin_policy_enforce_project_tag_on_resources" {
   }
 }
 
-
 module "root_management_group_builtin_policy_enable_azure_monitor_for_vms" {
   source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
   management_group_id = module.root_management_group.id
-  name                = "EnableAzureMonForVmS"
+  name                = "EnableAzureMonForVms"
   display_name        = "Enable Azure Monitor for VMs"
   description         = "Enable Azure Monitor for the virtual machines (VMs) in the specified scope (management group, subscription or resource group). Takes Log Analytics workspace as parameter."
   policy_id           = "/providers/Microsoft.Authorization/policySetDefinitions/55f3eceb-5573-4f18-9695-226972c6d74a"
@@ -190,6 +212,163 @@ module "root_management_group_builtin_policy_enable_azure_monitor_for_vms" {
   }
   PARAMETERS
   managed_identity    = true
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+module "root_management_group_role_assignment_for_policy_enable_azure_monitor_for_vms" {
+  source       = "../terraform-azure-alz-role-assignment"
+  principal_id = module.root_management_group_builtin_policy_enable_azure_monitor_for_vms.assignment.identity[0].principal_id
+  role_name    = "Log Analytics Contributor"
+  scope        = module.root_management_group.id
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+
+module "root_management_group_builtin_policy_enable_azure_monitor_for_vmss" {
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
+  management_group_id = module.root_management_group.id
+  name                = "EnableAzureMonForVmss"
+  display_name        = "Enable Azure Monitor for Virtual Machine Scale Sets"
+  description         = "Enable Azure Monitor for the Virtual Machine Scale Sets in the specified scope (Management group, Subscription or resource group). Takes Log Analytics workspace as parameter. Note: if your scale set upgradePolicy is set to Manual, you need to apply the extension to the all VMs in the set by calling upgrade on them. In CLI this would be az vmss update-instances."
+  policy_id           = "/providers/Microsoft.Authorization/policySetDefinitions/75714362-cae7-409e-9b99-a8e5075b7fad"
+  parameters          = <<PARAMETERS
+  {
+      "logAnalytics_1": {
+        "value": "${module.log_analytics_workspace.id}"
+      }
+  }
+  PARAMETERS
+  managed_identity    = true
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+module "root_management_group_role_assignment_for_policy_enable_azure_monitor_for_vmss" {
+  for_each     = toset(["Log Analytics Contributor", "Virtual Machine Contributor"])
+  source       = "../terraform-azure-alz-role-assignment"
+  principal_id = module.root_management_group_builtin_policy_enable_azure_monitor_for_vmss.assignment.identity[0].principal_id
+  role_name    = each.value
+  scope        = module.root_management_group.id
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+module "root_management_group_builtin_policy_enable_monitoring_in_azure_security_center" {
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
+  management_group_id = module.root_management_group.id
+  name                = "AzureSecurityBenchmark"
+  display_name        = "Enable Monitoring in Azure Security Center"
+  description         = "The Azure Security Benchmark initiative represents the policies and controls implementing security recommendations defined in Azure Security Benchmark v3, see https://aka.ms/azsecbm. This also serves as the Microsoft Defender for Cloud default policy initiative. You can directly assign this initiative, or manage its policies and compliance results within Microsoft Defender for Cloud."
+  policy_id           = "/providers/Microsoft.Authorization/policySetDefinitions/1f3afdf9-d0c9-4c3d-847f-89da613e70a8"
+
+  managed_identity    = false
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+module "root_management_group_builtin_policy_configure_loganalytics_for_windows_arc_servers" {
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
+  management_group_id = module.root_management_group.id
+  name                = "DeployWSArcMonitoring"
+  display_name        = "Configure Log Analytics extension on Azure Arc enabled Windows servers"
+  description         = "Enable VM insights on servers and machines connected to Azure through Arc enabled servers by installing the Log Analytics virtual machine extension. VM insights uses the Log Analytics agent to collect the guest OS performance data, and provides insights into their performance. See more - https://aka.ms/vminsightsdocs. Deprecation notice: The Log Analytics agent is on a deprecation path and won't be supported after August 31, 2024. You must migrate to the replacement 'Azure Monitor agent' prior to that date."
+  policy_id           = "/providers/Microsoft.Authorization/policyDefinitions/69af7d4a-7b18-4044-93a9-2651498ef203"
+  parameters          = <<PARAMETERS
+  {
+      "logAnalytics": {
+        "value": "${module.log_analytics_workspace.id}"
+      }
+  }
+  PARAMETERS
+  managed_identity    = true
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+module "root_management_group_role_assignment_for_policy_configure_loganalytics_for_windows_arc_servers" {
+  source       = "../terraform-azure-alz-role-assignment"
+  principal_id = module.root_management_group_builtin_policy_configure_loganalytics_for_windows_arc_servers.assignment.identity[0].principal_id
+  role_name    = "Log Analytics Contributor"
+  scope        = module.root_management_group.id
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+module "root_management_group_builtin_policy_configure_loganalytics_for_linux_arc_servers" {
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
+  management_group_id = module.root_management_group.id
+  name                = "DeployLXArcMonitoring"
+  display_name        = "Configure Log Analytics extension on Azure Arc enabled Linux servers. See deprecation notice below"
+  description         = "Enable VM insights on servers and machines connected to Azure through Arc enabled servers by installing the Log Analytics virtual machine extension. VM insights uses the Log Analytics agent to collect the guest OS performance data, and provides insights into their performance. See more - https://aka.ms/vminsightsdocs. Deprecation notice: The Log Analytics agent is on a deprecation path and won't be supported after August 31, 2024. You must migrate to the replacement 'Azure Monitor agent' prior to that date"
+  policy_id           = "/providers/Microsoft.Authorization/policyDefinitions/9d2b61b4-1d14-4a63-be30-d4498e7ad2cf"
+  parameters          = <<PARAMETERS
+  {
+      "logAnalytics": {
+        "value": "${module.log_analytics_workspace.id}"
+      }
+  }
+  PARAMETERS
+  managed_identity    = true
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+module "root_management_group_role_assignment_for_policy_configure_loganalytics_for_linux_arc_servers" {
+  source       = "../terraform-azure-alz-role-assignment"
+  principal_id = module.root_management_group_builtin_policy_configure_loganalytics_for_linux_arc_servers.assignment.identity[0].principal_id
+  role_name    = "Log Analytics Contributor"
+  scope        = module.root_management_group.id
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+module "root_management_group_builtin_policy_actvity_log_diagnostics_to_log_analytics_workspace" {
+  source              = "../terraform-azure-alz-core-platform-management-group-policy-assignment"
+  management_group_id = module.root_management_group.id
+  name                = "AzActivityLogDiagToLaw"
+  display_name        = "Configure Azure Activity logs to stream to specified Log Analytics workspace"
+  description         = "Deploys the diagnostic settings for Azure Activity to stream subscriptions audit logs to a Log Analytics workspace to monitor subscription-level events"
+  policy_id           = "/providers/Microsoft.Authorization/policyDefinitions/2465583e-4e78-4c15-b6be-a36cbc7c8b0f"
+  parameters          = <<PARAMETERS
+  {
+      "logAnalytics": {
+        "value": "${module.log_analytics_workspace.id}"
+      }
+  }
+  PARAMETERS
+  managed_identity    = true
+
+  providers = {
+    azurerm = azurerm
+  }
+}
+
+module "root_management_group_role_assignment_for_policy_actvity_log_diagnostics_to_log_analytics_workspace" {
+  for_each     = toset(["Log Analytics Contributor", "Monitoring Contributor"])
+  source       = "../terraform-azure-alz-role-assignment"
+  principal_id = module.root_management_group_builtin_policy_actvity_log_diagnostics_to_log_analytics_workspace.assignment.identity[0].principal_id
+  role_name    = each.value
+  scope        = module.root_management_group.id
 
   providers = {
     azurerm = azurerm
