@@ -2,7 +2,7 @@
 locals {
   management_groups = {
     root         = "MyOrg"
-    organisation = ["Platform", "Landing zones", "Decommissioned", "Sandbox"]
+    organisation = ["Platform", "Landing zones", "Decommissioned", "Sandboxes"]
     platform     = ["Identity", "Management", "Connectivity"]
     application  = ["Corp", "Online"]
   }
