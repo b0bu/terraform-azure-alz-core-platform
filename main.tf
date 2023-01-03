@@ -175,8 +175,12 @@ module "platform_management_groups" {
 
 module "centralised_logging_workspace_rg" {
   source   = "../terraform-azure-alz-resource-group"
-  name     = "${local.management_groups.root}-centralised-logging-workspace"
+  name     = "centralised-logging-workspace"
   location = "uksouth"
+  tags = {
+    Project = ""
+    Solution = ""
+  }
   providers = {
     azurerm = azurerm.management
   }
